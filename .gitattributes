@@ -1,0 +1,4 @@
+*.pgm filter=lfs diff=lfs merge=lfs -text
+*.zip filter=lfs diff=lfs merge=lfs -text
+lib/*.jar filter=lfs diff=lfs merge=lfs -text
+geoids/* filter=lfs diff=lfs merge=lfs -text
