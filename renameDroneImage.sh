@@ -21,9 +21,12 @@ fi
 
 # Use exiv2 to extr
 # Use exiv2 to extract make, model, and date
+# skydio camera don't fill in "Image timestamp"
+# exiv2 -K Exif.Image.DateTime -Pv
 MAKE=$(exiv2 "$IMAGE_FILE" | grep 'Camera make' | awk -F': ' '{print $2}' | sed 's/ /_/g')
 MODEL=$(exiv2 "$IMAGE_FILE" | grep 'Camera model' | awk -F': ' '{print $2}' | sed 's/ /_/g')
-DATE=$(exiv2 "$IMAGE_FILE" | grep 'Image timestamp' | awk -F': ' '{print $2}' | sed 's/ /_/g' | sed 's/:/-/g')
+# DATE=$(exiv2 "$IMAGE_FILE" | grep 'Image timestamp' | awk -F': ' '{print $2}' | sed 's/ /_/g' | sed 's/:/-/g')
+DATE=$(exiv2 -K Exif.Image.DateTime -Pv "$IMAGE_FILE" | sed 's/ /_/g' | sed 's/:/-/g')
 
 # Calculate the hash of the image
 HASH=$(md5sum "$IMAGE_FILE" | awk '{print $1}')
@@ -32,6 +35,6 @@ HASH=$(md5sum "$IMAGE_FILE" | awk '{print $1}')
 NEW_NAME="${MAKE}-${MODEL}-${DATE}-${HASH}.jpg"
 
 # Rename the file
-mv "$IMAGE_FILE" "$NEW_NAME"
+#mv "$IMAGE_FILE" "$NEW_NAME"
 
 echo "File renamed to $NEW_NAME"
