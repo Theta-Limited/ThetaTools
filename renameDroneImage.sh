@@ -35,6 +35,6 @@ HASH=$(md5sum "$IMAGE_FILE" | awk '{print $1}')
 NEW_NAME="${MAKE}-${MODEL}-${DATE}-${HASH}.jpg"
 
 # Rename the file
-#mv "$IMAGE_FILE" "$NEW_NAME"
+mv "$IMAGE_FILE" "$NEW_NAME"
 
 echo "File renamed to $NEW_NAME"
