@@ -4,6 +4,8 @@
 // from OpenTopography.org and write out
 // to a tiff file; API Key is fetched
 // from env variable OPENTOPOGRAPHY_API_KEY
+// run from command-line via:
+// java -cp . DemDownloader lat lon length
 
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -11,6 +13,7 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.IOException;
 import java.io.FileOutputStream;
+import java.util.function.Consumer;
 
 public class DemDownloader {
 
@@ -37,8 +40,9 @@ public class DemDownloader {
         }
     }
 
-    // Method to download DEM
-    public void download() throws IOException {
+    // Method to download DEM with blocking
+    // 
+    public boolean syncDownload() throws IOException {
         String requestURLStr = URL_STR +
                 "demtype=" + DEM_TYPE_STR +
                 "&south=" + s +
@@ -47,6 +51,7 @@ public class DemDownloader {
                 "&east=" + e +
                 "&outputFormat=" + outputFormatStr +
                 "&API_Key=" + apiKeyStr;
+	boolean b = false;
 
         URL url = new URL(requestURLStr);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -55,7 +60,7 @@ public class DemDownloader {
 	int responseCode = connection.getResponseCode();
 	if (responseCode != HttpURLConnection.HTTP_OK) {
 	    System.out.println("Request failed, error code "+responseCode);
-	    return;
+	    return false;
 	}
 
         // read and write out the data to file
@@ -75,15 +80,49 @@ public class DemDownloader {
 	    }
 	    outputStream.close();
 	    System.out.println("Wrote "+totalBytes+" bytes to "+filename);
+	    b = true;
 	}
 	catch (Exception e) {
 	    System.out.println("Write to fail failed "+e);
+	    b = false;
 	}
 
         connection.disconnect();
+
+	return true;
 	
     } // download
 
+    // down a DEM async or in background
+    // callback will indicate success or error
+    // pass an object that implements a callback metho
+    // onCallback() method
+    
+    public void asyncDownload(Consumer<String> consumer)
+    {
+	Thread aThread = new Thread(new Runnable() {
+	   @Override
+	   public void run()
+	   {
+	       boolean b;
+	       
+	       // call the sync download from within our thread
+	       //
+	       try {
+		   b = syncDownload();
+                   consumer.accept("Download returned "+b);
+	       }
+	       catch (Exception e) {
+	           consumer.accept(e.toString());
+	       }
+	   } // run
+	});
+
+	aThread.start();
+	System.out.println("asyncDownloading started");	
+
+    } // downloaAdsync
+    
     // Method to calculate the bounding box
     private double[] getBoundingBox(double centerLat, double centerLon, double length) {
         double d = Math.sqrt(2.0) * (length / 2.0);
@@ -133,12 +172,17 @@ public class DemDownloader {
 	DemDownloader aDownloader = new DemDownloader(lat,lon,len);
 
 	try {
-	    aDownloader.download();
+	    aDownloader.asyncDownload(new Consumer<String>() {
+		    @Override
+		    public void accept(String s) {
+			System.out.println(s);
+		    }
+	     });
 	} catch (Exception e) {
 	    System.out.println("Download failed "+e);
 	}
 	
-    }
+    } // main
 
 } // DemDownloader
 
