@@ -15,8 +15,8 @@ import java.io.IOException;
 import java.io.FileOutputStream;
 import java.util.function.Consumer;
 
-public class DemDownloader {
-
+public class DemDownloader
+{
     private String apiKeyStr; // API Key
     private static final String URL_STR = "https://portal.opentopography.org/API/globaldem?";
     private static final String DEM_TYPE_STR = "SRTMGL1";
@@ -28,10 +28,14 @@ public class DemDownloader {
 
     public DemDownloader(double lat, double lon, double length) {
         double[] boundingBox = getBoundingBox(lat, lon, length);
-        s = boundingBox[0];
-        w = boundingBox[1];
-        n = boundingBox[2];
-        e = boundingBox[3];
+
+	n = boundingBox[0];
+        s = boundingBox[1];
+        e = boundingBox[2];
+        w = boundingBox[3];
+
+	System.out.println(n+","+s+","+e+","+w);
+
         apiKeyStr = "NeedApiKey";
 	// read API key from environment variable
 	apiKeyStr = System.getenv("OPENTOPOGRAPHY_API_KEY");
@@ -53,6 +57,9 @@ public class DemDownloader {
                 "&API_Key=" + apiKeyStr;
 	boolean b = false;
 
+	System.out.println("urlStr is "+requestURLStr);
+
+	
         URL url = new URL(requestURLStr);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setRequestMethod("GET");
@@ -122,33 +129,51 @@ public class DemDownloader {
 	System.out.println("asyncDownloading started");	
 
     } // downloaAdsync
+
+    // calculate bounding box; return [n,s,e,w]
+    private double[] getBoundingBox(double centerLat, double centerLon, double length)
+    {
+        final double metersInDegreeLatitude = 111320; // Approximate meters in one degree of latitude
+
+        // Calculate deltas
+        double deltaLat = (length / 2) / metersInDegreeLatitude;
+        double deltaLon = (length / 2) / (metersInDegreeLatitude * Math.cos(Math.toRadians(centerLat)));
+
+        // Calculate bounding box
+        double north = centerLat + deltaLat;
+        double south = centerLat - deltaLat;
+        double east = centerLon + deltaLon;
+        double west = centerLon - deltaLon;
+
+        return new double[]{truncateDouble(north,6), truncateDouble(south,6), truncateDouble(east,6), truncateDouble(west,6)};
+    }
     
     // Method to calculate the bounding box
-    private double[] getBoundingBox(double centerLat, double centerLon, double length) {
-        double d = Math.sqrt(2.0) * (length / 2.0);
-        double[] sw = calculateCoordinate(centerLat, centerLon, 225.0, d);
-        double[] ne = calculateCoordinate(centerLat, centerLon, 45.0, d);
+    // private double[] getBoundingBox(double centerLat, double centerLon, double length) {
+    //     double d = Math.sqrt(2.0) * (length / 2.0);
+    //     double[] sw = calculateCoordinate(centerLat, centerLon, 225.0, d);
+    //     double[] ne = calculateCoordinate(centerLat, centerLon, 45.0, d);
 
-        return new double[]{truncateDouble(sw[0], 6), truncateDouble(sw[1], 6), 
-                            truncateDouble(ne[0], 6), truncateDouble(ne[1], 6)};
-    }
+    //     return new double[]{truncateDouble(sw[0], 6), truncateDouble(sw[1], 6), 
+    //                         truncateDouble(ne[0], 6), truncateDouble(ne[1], 6)};
+    // }
 
-    // Helper method to calculate new coordinate; ChatGPT 
-    private double[] calculateCoordinate(double lat, double lon, double bearing, double distance) {
-        double radius = 6371e3; // Earth's radius in meters
-        double angularDistance = distance / radius;
+    // // Helper method to calculate new coordinate; ChatGPT 
+    // private double[] calculateCoordinate(double lat, double lon, double bearing, double distance) {
+    //     double radius = 6371e3; // Earth's radius in meters
+    //     double angularDistance = distance / radius;
 
-        double latRad = Math.toRadians(lat);
-        double lonRad = Math.toRadians(lon);
-        bearing = Math.toRadians(bearing);
+    //     double latRad = Math.toRadians(lat);
+    //     double lonRad = Math.toRadians(lon);
+    //     bearing = Math.toRadians(bearing);
 
-        double newLat = Math.asin(Math.sin(latRad) * Math.cos(angularDistance) +
-                                  Math.cos(latRad) * Math.sin(angularDistance) * Math.cos(bearing));
-        double newLon = lonRad + Math.atan2(Math.sin(bearing) * Math.sin(angularDistance) * Math.cos(latRad),
-                                            Math.cos(angularDistance) - Math.sin(latRad) * Math.sin(newLat));
+    //     double newLat = Math.asin(Math.sin(latRad) * Math.cos(angularDistance) +
+    //                               Math.cos(latRad) * Math.sin(angularDistance) * Math.cos(bearing));
+    //     double newLon = lonRad + Math.atan2(Math.sin(bearing) * Math.sin(angularDistance) * Math.cos(latRad),
+    //                                         Math.cos(angularDistance) - Math.sin(latRad) * Math.sin(newLat));
 
-        return new double[]{Math.toDegrees(newLat), Math.toDegrees(newLon)};
-    }
+    //     return new double[]{Math.toDegrees(newLat), Math.toDegrees(newLon)};
+    // }
 
     public static double truncateDouble(double val, int precision) {
         double scale = Math.pow(10, precision);
