@@ -41,7 +41,7 @@ def recvMessage(sock):
 def recvSingleMessage(sock):
     buf = b''
     bufStr = ""
-    (newbuf,fromAddress) = sock.recvfrom(1024)
+    (newbuf,fromAddress) = sock.recvfrom(2048)
     if not newbuf:
        return (None,None)
     buf += newbuf
@@ -60,7 +60,8 @@ def processMessage(sock):
         if data is None:
             return -1
         data = data.rstrip('\n')
-        print("processMessage: received: '",data,"' from ",fromAddress,sep='')
+        print("processMessage: received from ",fromAddress);
+        print("processMessage: received: '",data);
         reply = data+"\n\n"
         reply = reply.encode()
         sock.sendto(reply,fromAddress)
