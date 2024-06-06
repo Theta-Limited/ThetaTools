@@ -22,7 +22,7 @@ def recvMessage(sock):
     buf = b''
     bufStr = ""
     while True:
-      (newbuf,fromAddress) = sock.recvfrom(1024)
+      (newbuf,fromAddress) = sock.recvfrom(2048)
       if not newbuf:
           return (None,None)
       buf += newbuf
