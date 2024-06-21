@@ -1,7 +1,7 @@
 # ThetaTools
 Various tools and documentation created and/or used by Theta Informatics LLC.
 
-## [Cursor on Target Technical Implementation Guide PDF])(https://github.com/Theta-Limited/ThetaTools/raw/main/CursorOnTarget_Technical_Implementation_Guide.pdf)
+## [Cursor on Target Technical Implementation Guide PDF](https://github.com/Theta-Limited/ThetaTools/raw/main/CursorOnTarget_Technical_Implementation_Guide.pdf)
 
 The file CursorOnTarget_Technical_Implementation_Guide.pdf in this repo contains significant developer resources for the Cursor on Target (CoT) protocol, initially published by the MITRE corporation. This protocol has since become widely integrated through [ATAK](https://en.wikipedia.org/wiki/Android_Team_Awareness_Kit) and compatible platforms.
 
