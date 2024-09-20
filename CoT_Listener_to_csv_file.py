@@ -8,8 +8,7 @@ import socket
 import struct
 import xml.etree.ElementTree as ET
 import csv
-from datetime import datetime
-import pytz
+from datetime import datetime, timezone
 
 # Multicast group details
 MCAST_GRP = '239.2.3.1'
@@ -24,14 +23,18 @@ mreq = struct.pack("4sl", socket.inet_aton(MCAST_GRP), socket.INADDR_ANY)
 sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
 
 # Get the current time in ISO8601 format with timezone
-current_time = datetime.now(pytz.utc).isoformat()
+current_time = datetime.now(timezone.utc).isoformat()
 # Replace colons and periods to make it a legal filename on Windows
 file_safe_time = current_time.replace(':', '-').replace('.', '-')
 
 # CSV file to store the data
 csv_file = f'OA-CoT-Capture-{file_safe_time}.csv'
 
+# Column names for the CSV file
+fieldnames = ['EXIF DateTime', 'Processed DateTime', 'lat', 'lon', 'hae', 'ce']
+
 with open(csv_file, 'w', newline='') as file:
+    # header row with field names
     writer = csv.DictWriter(file, fieldnames=fieldnames)
     writer.writeheader()
 
@@ -55,7 +58,7 @@ with open(csv_file, 'w', newline='') as file:
             root = ET.fromstring(data)
 
             # Extract data fields
-            event = root.find('event')
+            event = root
             point = root.find('point')
 
             if event is not None and point is not None:
