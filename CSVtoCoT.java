@@ -65,14 +65,22 @@ public class CSVtoCoT {
             String line;
             // Skip header
             br.readLine();
+            long line_num = 0;
             while ((line = br.readLine()) != null) {
+                line_num++;
                 String[] values = line.split(",");
-                double lat = Double.parseDouble(values[4]);
-                double lon = Double.parseDouble(values[5]);
-                double hae = Double.parseDouble(values[6]); // Using Elevation column for WGS84 hae
-                double ce = Double.parseDouble(values[12]); // Horizontal Accuracy
-                double le = Double.parseDouble(values[13]); // Vertical Accuracy
-                String uid_suffix = values[2];
+                // double lat = Double.parseDouble(values[4]);
+                // double lon = Double.parseDouble(values[5]);
+                // double hae = Double.parseDouble(values[6]); // Using Elevation column for WGS84 hae
+                // double ce = Double.parseDouble(values[12]); // Horizontal Accuracy
+                // double le = Double.parseDouble(values[13]); // Vertical Accuracy
+                // String uid_suffix = values[2];
+                double lat = Double.parseDouble(values[2]);
+                double lon = Double.parseDouble(values[3]);
+                double hae = Double.parseDouble(values[4]);
+                double ce = Double.parseDouble(values[5]);
+                double le = 5.1; // Vertical Accuracy
+                String uid_suffix = String.valueOf(line_num);
                 if (uid_suffix == null) {
                     uid_suffix = Long.valueOf(eventuid).toString();
                 }
@@ -91,7 +99,7 @@ public class CSVtoCoT {
         String nowAsISO = df.format(now);
         Calendar cal = Calendar.getInstance();
         cal.setTime(now);
-        cal.add(Calendar.MINUTE, 12);
+        cal.add(Calendar.MINUTE, 180);
         Date staleTime = cal.getTime();
         String staleTimeISO = df.format(staleTime);
 
