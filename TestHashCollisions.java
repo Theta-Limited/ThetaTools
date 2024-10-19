@@ -5,6 +5,7 @@
 // sort json object, get hash
 
 // javac -cp .:./metadata-extractor-2.16.0.jar:./json-20210307.jar:./core-0.2.5-SNAPSHOT.jar TestHashCollisions.java
+// java -cp .:./metadata-extractor-2.16.0.jar:./json-20210307.jar:./core-0.2.5-SNAPSHOT.jar TestHashCollisions dir
 
 import org.json.JSONObject;
 
@@ -23,14 +24,21 @@ import java.io.IOException;
 import java.nio.file.Files;
 
 import com.openathena.core.DroneImage;
+import com.openathena.core.DroneImageFactory;
 import com.openathena.core.LRUCache;
+
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.nio.charset.StandardCharsets;
 
 public class TestHashCollisions
 {
-    public static LRUCache<Integer,Integer> cache = new LRUCache<>(10000);
+    public static LRUCache<String,String> cache = new LRUCache<>(10000);
     public static int numFiles = 0;
+    private static MessageDigest digest = null;    
 	
-    public static JSONObject sortJsonObject(JSONObject jsonObject) {
+    public static JSONObject sortJsonObject(JSONObject jsonObject)
+    {
         // Create a TreeMap to store the key-value pairs in sorted order
         TreeMap<String, Object> sortedMap = new TreeMap<>();
 
@@ -93,10 +101,14 @@ public class TestHashCollisions
 	DroneImage droneImage;
 
 	numFiles++;
+
+        System.out.println("Processing "+aFile.getPath());	    
 	
 	try {
-	    droneImage = new DroneImage(aFile.getPath());
+	    droneImage = DroneImageFactory.create(aFile.getPath());
 	    JSONObject o = new JSONObject();
+
+   	    System.out.println("Created drone image for "+aFile.getPath());	    
 	    
             // o.put("Name",droneImage.getImageFilename());
 	    // don't put in filename so we don't factor that into hash
@@ -117,19 +129,22 @@ public class TestHashCollisions
 	    JSONObject sortedJsonObject = sortJsonObject(o);
 	    sortedJsonObject.put("xprop","0.0");
 	    sortedJsonObject.put("yprop","0.0");
-	
+
+   	    System.out.println("Created drone json object for "+aFile.getPath());
+	    
 	    // now calculate hash over sorted object
-	    int anInt = Objects.hash(sortedJsonObject.toString());
+	    //int anInt = Objects.hash(sortedJsonObject.toString());
+	    String aStr = getSHA256Hash(sortedJsonObject.toString());		
 
-            System.out.println("Processing file: " + aFile.getCanonicalPath()+" "+anInt);
+            System.out.println("Processing file hash is: " + aFile.getCanonicalPath()+" "+aStr);
 
-	    if (cache.containsKey(Integer.valueOf(anInt)) == true) {
-		System.out.println("Cache collision for "+aFile.getPath()+", "+anInt);
+	    if (cache.containsKey(aStr) == true) {
+		System.out.println("Cache collision for "+aFile.getPath()+", "+aStr);
 		System.out.println("Processed "+numFiles+" image files");
 		System.exit(-1);
 	    }
 	    else {
-		cache.put(Integer.valueOf(anInt),Integer.valueOf(anInt));
+		cache.put(aStr,aStr);
 	    }
 
 	    // check cache
@@ -141,6 +156,34 @@ public class TestHashCollisions
 	return;
     }
 
+    // pass a toString() version of sorted json object; get back
+    // a string hash
     
+    public static String getSHA256Hash(String oStr)
+    {
+        try {
+	    if (digest == null) {
+		digest = MessageDigest.getInstance("SHA-256");	    		
+	    }
+	    
+            // Compute the hash (returns a byte array)
+            byte[] hashBytes = digest.digest(oStr.getBytes(StandardCharsets.UTF_8));
+
+            // Convert the byte array to a hex string for easier storage
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hashBytes) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) {
+                    hexString.append('0');
+                }
+                hexString.append(hex);
+            }
+            return hexString.toString();  // Return the hex string representation of the hash
+
+        } catch (NoSuchAlgorithmException e) {
+	    System.out.println("getSHA256Hash: exception "+e);
+            throw new RuntimeException(e);
+        }
+    }
 
 }
