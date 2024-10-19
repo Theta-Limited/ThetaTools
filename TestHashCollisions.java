@@ -27,7 +27,7 @@ import com.openathena.core.LRUCache;
 
 public class TestHashCollisions
 {
-    public static LRUCache<Integer,DroneImage> cache = new LRUCache<>(10000);
+    public static LRUCache<Integer,Integer> cache = new LRUCache<>(10000);
     public static int numFiles = 0;
 	
     public static JSONObject sortJsonObject(JSONObject jsonObject) {
@@ -73,7 +73,6 @@ public class TestHashCollisions
                 } else if (file.isFile() && isJpegFile(file)) {
                     // Process JPEG files
                     try {
-                        System.out.println("Processing file: " + file.getCanonicalPath());
 			getMetadataHash(file);
                     } catch (Exception e) {
                         System.out.println("Error processing file: "+e);
@@ -91,11 +90,16 @@ public class TestHashCollisions
     // given a file, get metadata hash of sorted json object
     public static void getMetadataHash(File aFile)
     {
+	DroneImage droneImage;
+
+	numFiles++;
+	
 	try {
-	    DroneImage droneImage = new DroneImage(aFile.getPath());
+	    droneImage = new DroneImage(aFile.getPath());
 	    JSONObject o = new JSONObject();
 	    
-            o.put("Name",droneImage.getImageFilename());
+            // o.put("Name",droneImage.getImageFilename());
+	    // don't put in filename so we don't factor that into hash
             o.put("GPS Latitude",Double.toString(droneImage.getLatitude()));
             o.put("GPS Longitude",Double.toString(droneImage.getLongitude()));
             o.put("Focal Length",Double.toString(droneImage.getFocalLength()));
@@ -116,16 +120,16 @@ public class TestHashCollisions
 	
 	    // now calculate hash over sorted object
 	    int anInt = Objects.hash(sortedJsonObject.toString());
-	    DroneImage anotherImage = cache.get(Integer.valueOf(anInt));
 
-	    if (anotherImage != null) {
-		System.out.println("Cache collision for "+anInt);
-		System.out.println(anotherImage.getImageFilename()+","+aFile.getPath());
+            System.out.println("Processing file: " + aFile.getCanonicalPath()+" "+anInt);
+
+	    if (cache.containsKey(Integer.valueOf(anInt)) == true) {
+		System.out.println("Cache collision for "+aFile.getPath()+", "+anInt);
 		System.out.println("Processed "+numFiles+" image files");
 		System.exit(-1);
 	    }
 	    else {
-		cache.put(Integer.valueOf(anInt),droneImage);
+		cache.put(Integer.valueOf(anInt),Integer.valueOf(anInt));
 	    }
 
 	    // check cache
