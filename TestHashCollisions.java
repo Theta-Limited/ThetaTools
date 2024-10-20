@@ -33,7 +33,7 @@ import java.nio.charset.StandardCharsets;
 
 public class TestHashCollisions
 {
-    public static LRUCache<String,String> cache = new LRUCache<>(10000);
+    public static LRUCache<String,JSONObject> cache = new LRUCache<>(10000);
     public static int numFiles = 0;
     private static MessageDigest digest = null;    
 	
@@ -102,13 +102,13 @@ public class TestHashCollisions
 
 	numFiles++;
 
-        System.out.println("Processing "+aFile.getPath());	    
+        //System.out.println("Processing "+aFile.getPath());	    
 	
 	try {
 	    droneImage = DroneImageFactory.create(aFile.getPath());
 	    JSONObject o = new JSONObject();
 
-   	    System.out.println("Created drone image for "+aFile.getPath());	    
+   	    //System.out.println("Created drone image for "+aFile.getPath());	    
 	    
             // o.put("Name",droneImage.getImageFilename());
 	    // don't put in filename so we don't factor that into hash
@@ -129,22 +129,24 @@ public class TestHashCollisions
 	    JSONObject sortedJsonObject = sortJsonObject(o);
 	    sortedJsonObject.put("xprop","0.0");
 	    sortedJsonObject.put("yprop","0.0");
+	    sortedJsonObject.put("Name","");	    
 
-   	    System.out.println("Created drone json object for "+aFile.getPath());
+   	    //System.out.println("Created drone json object for "+aFile.getPath());
 	    
 	    // now calculate hash over sorted object
-	    //int anInt = Objects.hash(sortedJsonObject.toString());
-	    String aStr = getSHA256Hash(sortedJsonObject.toString());		
+	    String hashStr = getObjectsHash(sortedJsonObject.toString());
+	    //String hashStr = getSHA256Hash(sortedJsonObject.toString());
 
-            System.out.println("Processing file hash is: " + aFile.getCanonicalPath()+" "+aStr);
+            System.out.println("Processing file hash is: " + aFile.getCanonicalPath()+" "+hashStr);
 
-	    if (cache.containsKey(aStr) == true) {
-		System.out.println("Cache collision for "+aFile.getPath()+", "+aStr);
-		System.out.println("Processed "+numFiles+" image files");
-		System.exit(-1);
+	    JSONObject i = cache.get(hashStr);
+
+	    if ((i != null) && (validateImage(i,o) == false)) {
+		System.out.println("Cache collision for "+aFile.getPath()+", "+hashStr);
+		//System.exit(-1);
 	    }
 	    else {
-		cache.put(aStr,aStr);
+		cache.put(hashStr,o);
 	    }
 
 	    // check cache
@@ -156,8 +158,61 @@ public class TestHashCollisions
 	return;
     }
 
+    public static boolean validateImage(JSONObject i, JSONObject o)
+    {
+	String lat,lon,alt,az,pitch;
+
+	try {
+	    lat = o.getString("GPS Latitude");
+	    lon = o.getString("GPS Longitude");
+	    alt = o.getString("GPS Altitude");
+	    az = o.getString("drone:GimbalYawDegree");
+	    pitch = o.getString("drone:GimbalPitchDegree");
+
+	    if (lat.equals(i.getString("GPS Latitude")) == false) {
+		System.out.println("Drone cache image failed to match latitude");
+		return false;		
+    	    }
+	    if (lon.equals(i.getString("GPS Longitude")) == false) {
+		System.out.println("Drone cache image failed to match longitude");
+		return false;		
+    	    }
+	    if (alt.equals(i.getString("GPS Altitude")) == false) {
+		System.out.println("Drone cache image failed to match altitude");
+		return false;		
+    	    }
+	    if (az.equals(i.getString("drone:GimbalYawDegree")) == false) {
+		System.out.println("Drone cache image failed to match az");
+		return false;		
+    	    }
+	    if (pitch.equals(i.getString("drone:GimbalPitchDegree")) == false) {
+		System.out.println("Drone cache image failed to match pitch");
+		return false;		
+    	    }
+	}
+	catch (Exception e) {
+	    System.out.println("Drone image missing needed metadata for validation");
+	    return false;
+	}
+
+	System.out.println("Images are validated and equivalent");
+	
+	return true;
+    }
+
     // pass a toString() version of sorted json object; get back
     // a string hash
+
+    // use Objects hash function to compute hash over sorted JSON object string
+    // computation time good and tests indicate no collisions
+    // return string of hash
+    
+    public static String getObjectsHash(String oStr)
+    {
+	int anInt = Objects.hash(oStr);
+	return String.valueOf(anInt);
+    }
+    
     
     public static String getSHA256Hash(String oStr)
     {
