@@ -33,50 +33,59 @@ csv_file = f'OA-CoT-Capture-{file_safe_time}.csv'
 # Column names for the CSV file
 fieldnames = ['EXIF DateTime', 'Processed DateTime', 'lat', 'lon', 'hae', 'ce']
 
-with open(csv_file, 'w', newline='') as file:
-    # header row with field names
-    writer = csv.DictWriter(file, fieldnames=fieldnames)
-    writer.writeheader()
+try:
+    with open(csv_file, 'w', newline='', buffering=1) as file:
+        # Initialize CSV writer with line buffering
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        writer.writeheader()
 
-    try:
-        while True:
-            data, _ = sock.recvfrom(2048)  # Buffer size of 2048 bytes
-            try:
-                data = data.decode('utf-8')
-            except UnicodeDecodeError:
-                print("Received data could not be decoded as UTF-8")
-                continue  # Skip to the next iteration of the loop if decoding fails
+        try:
+            while True:
+                data, _ = sock.recvfrom(2048)  # Buffer size of 2048 bytes
+                try:
+                    data = data.decode('utf-8')
+                except UnicodeDecodeError:
+                    print("Received data could not be decoded as UTF-8")
+                    continue  # Skip to the next iteration of the loop if decoding fails
 
-            if not data.strip():
-                print("CoT message was empty")
-                continue # Skip to next iteration of loop if empty
+                if not data.strip():
+                    print("CoT message was empty")
+                    continue  # Skip to next iteration of loop if empty
 
-            print("Received CoT:")
-            print(data)
+                print("Received CoT:")
+                print(data)
 
-            # Parse XML data
-            root = ET.fromstring(data)
+                # Parse XML data
+                try:
+                    root = ET.fromstring(data)
+                except ET.ParseError as e:
+                    print(f"Failed to parse XML: {e}")
+                    continue  # Skip if XML is malformed
 
-            # Extract data fields
-            event = root
-            point = root.find('point')
+                # Extract data fields
+                event = root
+                point = root.find('point')
 
-            if event is not None and point is not None:
-                data_row = {
-                    'EXIF DateTime': event.get('time'),
-                    'Processed DateTime': event.get('start'),
-                    'lat': point.get('lat'),
-                    'lon': point.get('lon'),
-                    'hae': point.get('hae'),
-                    'ce': point.get('ce'),
-                }
+                if event is not None and point is not None:
+                    data_row = {
+                        'EXIF DateTime': event.get('time'),
+                        'Processed DateTime': event.get('start'),
+                        'lat': point.get('lat'),
+                        'lon': point.get('lon'),
+                        'hae': point.get('hae'),
+                        'ce': point.get('ce'),
+                    }
 
-                # Write to CSV
-                writer.writerow(data_row)
+                    # Write to CSV
+                    writer.writerow(data_row)
+                    file.flush()  # Ensure data is written to disk immediately
 
-    except KeyboardInterrupt:
-        print("Stopped by User")
-    finally:
-        sock.close()
+        except KeyboardInterrupt:
+            print("Stopped by User")
+        finally:
+            sock.close()
 
-print("CSV file has been written with multicast UDP data.")
+    print("CSV file has been written with multicast UDP data.")
+
+except Exception as e:
+    print(f"An error occurred: {e}")
