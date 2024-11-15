@@ -1,0 +1,19 @@
+{
+"Name": "test",
+"GPS Latitude" : "33.837470333333336",    
+"GPS Longitude" : "-84.52259847222223",
+"Focal Length" : "6.72",
+"Focal Length 35" : "24.0",
+"ImageWidth" :	"4032",
+"ImageHeight" :	"3024",
+"Camera:Roll" :	"0.0",
+"Digital Zoom Ratio" : "1.0",
+"GPS Altitude" : "0.0",
+"drone:GimbalPitchDegree" : "41.40",
+"drone:GimbalYawDegree" : "156.30",
+"tiff:Make" : "DJI",
+"tiff:Model" : "FC8482",
+"Date/Time Original" : "2024:06:21 09:15:00",
+"xprop" : "0.25",
+"yprop" : "0.25"
+}
