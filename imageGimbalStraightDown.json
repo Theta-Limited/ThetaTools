@@ -1,6 +1,6 @@
 {
 "GPS Latitude" : "28.804848",
-"GPS Longitude" : "-81.317337",
+"GPS Longitude" : "-81.317449209",
 "Focal Length" : "5.1",
 "ImageWidth" : "1920",
 "ImageHeight" : "1080",
@@ -14,3 +14,4 @@
 "xprop" : "0.5",
 "yprop" : "0.5",
 }'
+
