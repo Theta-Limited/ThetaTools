@@ -8,7 +8,8 @@
 // CC0 1.0
 // https://creativecommons.org/publicdomain/zero/1.0/deed.en
 
-// This program takes CSV files exported by the SW Maps app on Android
+// This program takes CSV files exported by either the SW Maps app on Android
+// ...or previously recorded using CoT_Listener_to_csv_file.py
 // and dumps all of the recorded point locations to ATAK using CoT messages
 // It automatically detects whether the CSV is a Ground Control Point list
 // or a previously captured CoT message and processes it accordingly
