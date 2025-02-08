@@ -39,6 +39,12 @@ for IMAGE_FILE in "$@"; do
         MAKE=$(exiv2 -P kt "$IMAGE_FILE" | grep -i 'tiff.make' | sed -E 's/^([^ ]+) +/\1 /' | awk -F' ' '{for(i=2; i<NF; i++) printf $i " "; print $(NF)}' | sed 's/ /_/g')
         echo "Make is now $MAKE"
     fi
+
+    # if make is now empty but model is XLxxx, rename to 'Autel Robotics'
+    if [[ -z "$MAKE" && "$MODEL" =~ ^XL ]]; then
+        echo "Make empty but I think its an Autel"
+        MAKE="Autel_Robotics"
+    fi
     
     # Calculate the MD5 hash of the image
     HASH=$(md5sum "$IMAGE_FILE" | awk '{print $1}')
