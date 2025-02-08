@@ -1,0 +1,22 @@
+{
+   "drone:GimbalPitchDegree": "58.19441",
+   "Comment": "Teal2: Hadron 640R EO sensor",
+   "GPS Latitude": "40.710335",
+   "GPS Longitude": "-111.89433999997223",
+   "Focal Length": "4.8",
+   "drone:GimbalYawDegree": "319.002289",
+   "Date/Time Original": "2024:07:31 19:17:50",
+   "tiff:Make": "Teledyne FLIR",
+   "Name": "teal2_img_eo_00015.jpg",
+   "GPS Altitude": "1303.2898677601336",
+   "tiff:Model": "Hadron 640R EO",
+   "ImageHeight": "3472",
+   "ImageWidth": "4624",
+   "Known": "true",
+   "Focal Length 35": "26.45284459717449",
+   "Lens": "perspective",
+   "Digital Zoom Ratio": "1.0",
+   "Camera:Roll": "-1.027896",
+   "Thermal": "false"
+}
+
