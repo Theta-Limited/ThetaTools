@@ -9,6 +9,7 @@
 
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URI;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.IOException;
@@ -47,7 +48,7 @@ public class DemDownloader
 
     // Method to download DEM with blocking
     // 
-    public boolean syncDownload() throws IOException {
+    public boolean syncDownload() throws Exception {
         String requestURLStr = URL_STR +
                 "demtype=" + DEM_TYPE_STR +
                 "&south=" + s +
@@ -74,13 +75,15 @@ public class DemDownloader
 
 
         URL url;
+        URI uri;
 
         if (usgs == true) {
-            URL url = new URL(usgsRequestURLStr);
+            uri = new URI(usgsRequestURLStr);
         }
         else {
-            URL url = new URL(requestURLStr);
+            uri = new URI(requestURLStr);
         }
+        url = uri.toURL();
 
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setRequestMethod("GET");
@@ -202,16 +205,25 @@ public class DemDownloader
     }
 
 
-    public static void main(String[] args)
+    public static void main(String[] args) throws Exception
     {
-	System.out.println("DemDownloader starting");
+        int index = 0;
+        
 	if (args.length < 3) {
 	    System.out.println("java DemDownloader [-usgs] lat lon length");
 	    System.exit(-1);
 	}
-	Double lat = Double.parseDouble(args[0]);
-	Double lon = Double.parseDouble(args[1]);
-	Double len = Double.parseDouble(args[2]);
+
+        // see if we have optional -usgs arg
+        // chatgpt!
+        if (args.length > 0 && args[0].equals("-usgs")) {
+            usgs = true;
+            index = 1; // move to next arg
+        }
+        
+	Double lat = Double.parseDouble(args[index]);
+	Double lon = Double.parseDouble(args[index+1]);
+	Double len = Double.parseDouble(args[index+2]);
 	    
 	System.out.println("Fetching DEM at ("+lat+","+lon+") "+len+" hxw meters");
 
