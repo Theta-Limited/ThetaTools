@@ -25,6 +25,7 @@ public class DemDownloader
     private double s, w, n, e; // Bounding box coordinates
     private String filenameSuffix = ".tiff";
     private String outputFormatStr = "GTiff";
+    private static boolean usgs = false; // download "USGS10m 3DEP instead of SRTM
 
     public DemDownloader(double lat, double lon, double length) {
         double[] boundingBox = getBoundingBox(lat, lon, length);
@@ -57,10 +58,30 @@ public class DemDownloader
                 "&API_Key=" + apiKeyStr;
 	boolean b = false;
 
-	System.out.println("urlStr is "+requestURLStr);
+	System.out.println("SRTM urlStr is "+requestURLStr);
 
-	
-        URL url = new URL(requestURLStr);
+        // USGS 3DEP 10m
+        String usgsRequestURLStr = "https://portal.opentopography.org/API/usgsdem?";
+        usgsRequestURLStr += "datasetName=USGS10m"+
+                "&south=" + s +
+                "&north=" + n +
+                "&west=" + w +
+                "&east=" + e +
+                "&outputFormat=" + outputFormatStr +
+                "&API_Key=" + apiKeyStr;
+
+        System.out.println("USGS10m urlStr is "+usgsRequestURLStr);
+
+
+        URL url;
+
+        if (usgs == true) {
+            URL url = new URL(usgsRequestURLStr);
+        }
+        else {
+            URL url = new URL(requestURLStr);
+        }
+
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setRequestMethod("GET");
 
@@ -185,7 +206,7 @@ public class DemDownloader
     {
 	System.out.println("DemDownloader starting");
 	if (args.length < 3) {
-	    System.out.println("java DemDownloader lat lon length");
+	    System.out.println("java DemDownloader [-usgs] lat lon length");
 	    System.exit(-1);
 	}
 	Double lat = Double.parseDouble(args[0]);
