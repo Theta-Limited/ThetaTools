@@ -76,10 +76,10 @@ public class CSVtoCoT {
                 // Assign column indices for Ground Control Point CSV
                 format.latIndex = 4;
                 format.lonIndex = 5;
-                format.haeIndex = 6;
-                format.ceIndex = 12;
-                format.leIndex = 13;
-                format.uidSuffixIndex = 2; // Remarks column
+                format.haeIndex = 8;
+                format.ceIndex = 14;
+                format.leIndex = 15;
+                format.uidSuffixIndex = 1; // Remarks column
                 System.out.println("Detected CSV Type: Ground Control Point List");
             } else if (isCoTCaptureCSV(header)) {
                 type = CSVType.COT_CAPTURE;
