@@ -20,13 +20,15 @@ public class DemDownloader
 {
     private String apiKeyStr; // API Key
     private static final String URL_STR = "https://portal.opentopography.org/API/globaldem?";
-    private static final String DEM_TYPE_STR = "SRTMGL1";
     private int responseCode;
     private int responseBytes;
     private double s, w, n, e; // Bounding box coordinates
     private String filenameSuffix = ".tiff";
     private String outputFormatStr = "GTiff";
     private static boolean usgs = false; // download "USGS10m 3DEP instead of SRTM
+    private static boolean eudtm = false; // download EU_DTM 30m instead of SRTM
+    private static boolean cop30 = false; // download cop30 instead of SRTM
+    private static boolean srtm = false;  // download SRTM dataset
 
     public DemDownloader(double lat, double lon, double length) {
         double[] boundingBox = getBoundingBox(lat, lon, length);
@@ -48,18 +50,19 @@ public class DemDownloader
 
     // Method to download DEM with blocking
     // 
-    public boolean syncDownload() throws Exception {
-        String requestURLStr = URL_STR +
-                "demtype=" + DEM_TYPE_STR +
+    public boolean syncDownload() throws Exception
+    {
+	boolean b = false;
+        
+        String srtmRequestURLStr = URL_STR +
+                "demtype=SRTMGL1" + 
                 "&south=" + s +
                 "&north=" + n +
                 "&west=" + w +
                 "&east=" + e +
                 "&outputFormat=" + outputFormatStr +
                 "&API_Key=" + apiKeyStr;
-	boolean b = false;
-
-	System.out.println("SRTM urlStr is "+requestURLStr);
+	System.out.println("SRTM urlStr is "+srtmRequestURLStr);
 
         // USGS 3DEP 10m
         String usgsRequestURLStr = "https://portal.opentopography.org/API/usgsdem?";
@@ -70,18 +73,57 @@ public class DemDownloader
                 "&east=" + e +
                 "&outputFormat=" + outputFormatStr +
                 "&API_Key=" + apiKeyStr;
+        System.out.println("USGS10m urlStr is "+usgsRequestURLStr);        
 
-        System.out.println("USGS10m urlStr is "+usgsRequestURLStr);
+        // cop30 30m
+        String cop30RequestURLStr = URL_STR +
+                "demtype=COP30" +
+                "&south=" + s +
+                "&north=" + n +
+                "&west=" + w +
+                "&east=" + e +
+                "&outputFormat=" + outputFormatStr +
+                "&API_Key=" + apiKeyStr;
+        System.out.println("COP30 urlStr is "+cop30RequestURLStr);
 
+        // EU DTM
+        String eudtmRequestURLStr = URL_STR +
+                "demtype=EU_DTM"+
+                "&south=" + s +
+                "&north=" + n +
+                "&west=" + w +
+                "&east=" + e +
+                "&outputFormat=" + outputFormatStr +
+                "&API_Key=" + apiKeyStr;
+        System.out.println("EUDTM urlStr is "+eudtmRequestURLStr);
 
         URL url;
         URI uri;
 
         if (usgs == true) {
+            System.out.println("Fetching USGS10m data");
             uri = new URI(usgsRequestURLStr);
+            filenameSuffix = ".3dep";
+        }
+        else if (eudtm == true) {
+            System.out.println("Fetching EU DTM data");
+            uri = new URI(eudtmRequestURLStr);
+            filenameSuffix = ".eudtm";
+        }
+        else if (cop30 == true) {
+            System.out.println("Fetching COP30 data");
+            uri = new URI(cop30RequestURLStr);
+            filenameSuffix = ".cop30";
+        }
+        else if (srtm == true) {
+            System.out.println("Fetching SRTM data");
+            uri = new URI(srtmRequestURLStr);
+            filenameSuffix = ".srtm";
         }
         else {
-            uri = new URI(requestURLStr);
+            System.out.println("You did not specify a dataset to use; assuming SRTM");
+            uri = new URI(srtmRequestURLStr);
+            filenameSuffix = ".srtm";
         }
         url = uri.toURL();
 
@@ -210,14 +252,29 @@ public class DemDownloader
         int index = 0;
         
 	if (args.length < 3) {
-	    System.out.println("java DemDownloader [-usgs] lat lon length");
+	    System.out.println("java DemDownloader [-srtm|-usgs|-eudtm|-cop30] lat lon length");
 	    System.exit(-1);
 	}
 
-        // see if we have optional -usgs arg
+        // see if we have optional dataset arg
         // chatgpt!
+        // all dataset choices are false; setting this option
+        // enables one to be true
+        
         if (args.length > 0 && args[0].equals("-usgs")) {
             usgs = true;
+            index = 1; // move to next arg
+        }
+        if (args.length > 0 && args[0].equals("-eudtm")) {
+            eudtm = true;
+            index = 1; // move to next arg
+        }
+        if (args.length > 0 && args[0].equals("-cop30")) {
+            cop30 = true;
+            index = 1; // move to next arg
+        }
+        if (args.length > 0 && args[0].equals("-srtm")) {
+            srtm = true;
             index = 1; // move to next arg
         }
         
