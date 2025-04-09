@@ -52,12 +52,11 @@ elif 'core' in sys.argv[1].strip().lower():
     isCore = True
     fieldnames = oa_core_fieldnames
 else:
-    sys.ext("FATAL ERROR: recording mode \"" + sys.argv[1].strip() + "\" was not recognized")
+    sys.exit("FATAL ERROR: recording mode \"" + sys.argv[1].strip() + "\" was not recognized")
 
 try:
     with open(csv_file, 'w', newline='', buffering=1) as file:
         # Initialize CSV writer with line buffering
-        # TODO NEED A CLI ARGUMENT FOR CORE VS ANDROID FIELDNAMES
         writer = csv.DictWriter(file, fieldnames=fieldnames)
         writer.writeheader()
 
