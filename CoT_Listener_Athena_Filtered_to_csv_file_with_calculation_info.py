@@ -32,7 +32,7 @@ file_safe_time = current_time.replace(':', '-').replace('.', '-')
 csv_file = f'OA-CoT-Capture-{file_safe_time}.csv'
 
 # Column names for the CSV file
-oa_core_fieldnames = ['EXIF DateTime', 'Processed DateTime', 'lat', 'lon', 'hae', 'ce', 'droneLatitude', 'droneLongitude', 'droneElevationHAE', 'cameraRollAngleDeg', 'cameraSlantAngleDeg', 'raySlantAngleDeg', 'make', 'model', 'isCameraModelRecognized', 'lensType', 'focalLength', 'digitalZoomRatio', 'gimbalPitchDegree', 'gimbalYawDegree', 'imageWidth', 'imageHeight', 'f_x', 'f_y', 'azimuthOffsetUserCorrection', 'imageSelectedProportionX', 'imageSelectedProportionY', 'yawOffsetDegSelectedPoint', 'pitchOffsetDegSelectedPoint', 'slantRange']
+oa_core_fieldnames = ['EXIF DateTime', 'Processed DateTime', 'lat', 'lon', 'hae', 'ce', 'droneLatitude', 'droneLongitude', 'droneElevationHAE', 'cameraRollAngleDeg', 'cameraSlantAngleDeg', 'raySlantAngleDeg', 'make', 'model', 'isCameraModelRecognized', 'lensType', 'focalLength', 'digitalZoomRatio', 'gimbalPitchDegree', 'gimbalYawDegree', 'imageWidth', 'imageHeight', 'f_x', 'f_y', 'azimuthOffsetUserCorrection', 'imageSelectedProportionX', 'imageSelectedProportionY', 'yawOffsetDegSelectedPoint', 'pitchOffsetDegSelectedPoint', 'slantRange', 'imageFilename', 'demFilename', 'gtype', 'terrainAltUnderDroneHAE']
 oa_android_debug_fieldnames = ['EXIF DateTime', 'Processed DateTime', 'lat', 'lon', 'hae', 'ce', 'droneLatitude', 'droneLongitude', 'droneElevationHAE', 'cameraRollAngleDeg', 'cameraSlantAngleDeg', 'raySlantAngleDeg', 'make', 'model', 'isCameraModelRecognized', 'lensType', 'k1', 'k2', 'k3', 'p1', 'p2', 'focalLength', 'digitalZoomRatio', 'imageWidth', 'imageLength', 'f_x', 'f_y', 'azimuthOffsetUserCorrection', 'imageSelectedProportionX', 'imageSelectedProportionY', 'yawOffsetDegSelectedPoint', 'pitchOffsetDegSelectedPoint', 'slantRange']
 fieldnames = None
 
@@ -119,10 +119,18 @@ try:
                         print("CoT not from openathena, skipping this message...")
                         continue
 
-                    # Extract all attributes from openAthenaCalculationInfo
-                    for attr in fieldnames[6:]:  # Skip exif time, processeddatetime, lat, lon, hae, ce which are already handled
-                        # TODO better error handling if some fields are missing
-                        data_row[attr] = calc_info.get(attr)
+                    missing_fields = []
+                    # Extract all other fields from OA calculation info
+                    for attr in fieldnames[6:]:  # Fields already handled are skipped
+                        field_value = calc_info.get(attr)
+                        if field_value is None:
+                            missing_fields.append(attr)
+                            data_row[attr] = ""  # Default empty string for missing value
+                        else:
+                            data_row[attr] = field_value
+
+                    if missing_fields:
+                        print(f"Warning: The following fields are missing in openAthenaCalculationInfo for uid '{uid}': {missing_fields}")
 
                     # Write to CSV
                     writer.writerow(data_row)
