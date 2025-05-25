@@ -7,9 +7,9 @@
 
 API_KEY=$OPENATHENA_API_KEY
 
-URL="http://localhost:8000/api/v1/openathena/admin/config?apikey=$API_KEY"
+URL="http://artemis.theta.limited:8000/api/v1/openathena/admin/config?apikey=$API_KEY"
 
-CURL_CMD="curl -s $URL"
+CURL_CMD="curl -v -s $URL"
 
 echo "Command is: $CURL_CMD"
 
