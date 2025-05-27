@@ -21,6 +21,10 @@ URL="http://$HOST:$PORT/api/v1/openathena/locationsimple?apikey=$API_KEY"
 CURL_CMD="curl -s -X POST -H 'Content-Type: application/json' -d @${JSON_FILE} '$URL' "
 
 output=$(eval $CURL_CMD)
+exitcode=$?
 
 echo $output
 echo
+
+exit $exitcode
+
