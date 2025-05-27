@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# get OACore RESTful API stats
+# get OACore number of RESTful API post calls
 # get args
 
 if [[ $# -ne 2 ]]; then
@@ -24,8 +24,7 @@ CURL_CMD="curl -s $URL"
 
 output=$(eval $CURL_CMD)
 
-echo "$output" | jq 'to_entries | sort_by(.key) | from_entries'
+# echo "$output" | jq 'to_entries | sort_by(.key) | from_entries'
 
 total=$(jq -r '.numRESTPosts' <<< "$output" )
-echo "Total posts is $total"
-
+echo "$total"
