@@ -179,7 +179,7 @@ public class CSVtoCoT {
      * @return True if it's a CoT Capture CSV, else false.
      */
     private static boolean isCoTCaptureCSV(String header) {
-        return header.contains("EXIF DateTime") && header.contains("lat") && header.contains("lon");
+        return header.contains("lat") && header.contains("lon");
     }
 
     /**
