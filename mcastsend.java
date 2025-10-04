@@ -34,10 +34,11 @@ public class mcastsend {
 
         // Open IPv4 channel, bind to the NIC's IPv4, set TTL and multicast egress NIC, then send
         try (DatagramChannel ch = DatagramChannel.open(java.net.StandardProtocolFamily.INET)) {
-            ch.bind(new InetSocketAddress(srcV4, 0));                           // bind to NIC’s IPv4
             ch.setOption(java.net.StandardSocketOptions.IP_MULTICAST_TTL, ttl); // TTL >= 1
             ch.setOption(java.net.StandardSocketOptions.IP_MULTICAST_IF, nif);  // egress interface
+            ch.bind(new InetSocketAddress(srcV4, 0));                           // bind to NIC’s IPv4
 
+	    
             ByteBuffer buf = ByteBuffer.wrap(message.getBytes(StandardCharsets.UTF_8));
             int bytes = ch.send(buf, new InetSocketAddress(groupAddr, port));
 
