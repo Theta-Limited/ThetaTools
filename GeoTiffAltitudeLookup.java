@@ -26,6 +26,9 @@ import com.agilesrc.dem4j.exceptions.InvalidValueException;
 import com.agilesrc.dem4j.Point;
 import com.agilesrc.dem4j.dted.DTEDLevelEnum;
 
+//  %javac -cp "lib/*" GeoTiffAltitudeLookup.java
+// java -cp ".:lib/*" GeoTiffAltitudeLookup
+
 public class GeoTiffAltitudeLookup
 {
     public enum GeoTiffDataType

@@ -29,7 +29,9 @@ import mil.nga.tiff.FieldTagType;
 //    Horizontal Coordinates: NAD83 [EPSG: 4269]
 //    Vertical Coordinates: NAVD88 [EPSG: 5703], EGM GEOID
 //    We need to convert the horizontal to WGS84
-
+// java -cp ./lib/core-0.4.1-SNAPSHOT.jar GeoTiffInfo.java
+// we use core lib to get access to mil.nga.tiff
+    
 public class GeoTiffInfo
 {
     static int GEOKEY_PIXELSCALE_TAG = 33550;

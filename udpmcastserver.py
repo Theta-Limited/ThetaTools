@@ -60,8 +60,8 @@ def processMessage(sock):
         if data is None:
             return -1
         data = data.rstrip('\n')
-        print("processMessage: received from ",fromAddress);
-        print("processMessage: received: '",data);
+        print("UDP Multicast processMessage: received from ",fromAddress);
+        print("UDP Multicast processMessage: received: '",data);
         reply = data+"\n\n"
         reply = reply.encode()
         sock.sendto(reply,fromAddress)
