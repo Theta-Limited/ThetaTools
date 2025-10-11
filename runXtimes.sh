@@ -2,7 +2,7 @@
 
 # Number of times to run the curl command
 #NUM_REQUESTS=10000
-NUM_REQUESTS=100000
+NUM_REQUESTS=10000
 
 # pull in API key from env variable
 API_KEY=$OPENATHENA_API_KEY

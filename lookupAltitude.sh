@@ -15,7 +15,7 @@ PORT="$2"
 LAT="$3"
 LON="$4"
 GTYPE=""
-URL="http://$HOST:$PORT/api/v1/openathena/dem/alt?lat=$LAT&lon=$LON"
+URL="https://$HOST:$PORT/api/v1/openathena/dem/alt?lat=$LAT&lon=$LON"
 
 if [[ $# -eq 5 ]]; then
     GTYPE="$5"
@@ -25,7 +25,8 @@ URL+="&apikey=$API_KEY"
 
 echo "Going to post $URL"
 
-CURL_CMD="curl -s -X POST '$URL' "
+# CURL_CMD="curl -s -X POST '$URL' "
+CURL_CMD="curl --connect-timeout 2 -X POST '$URL' "
 
 output=$(eval $CURL_CMD)
 exitcode=$?
