@@ -303,10 +303,10 @@ MaxarDtmReader: isDTED true
 java -cp ".:lib/*" MaxarDtmReader ~/repos/OpenAthenaCore/core/src/main/resources/DEM_LatLon_-55.0_-69.0_-54.0_-68.0.dt2 -54.5 -68.5
 Elev @ (-54.500000, -68.500000): 385.460 m
 
-IDW interpolation
+IDW interpolation with fix for IDW and exact point
 
 smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader ~/repos/OpenAthenaCore/core/src/main/resources/DEM_LatLon_-55.0_-69.0_-54.0_-68.0.dt2 -54.5 -68.5
-Elev @ (-54.500000, -68.500000): 382.070 m
+Elev @ (-54.500000, -68.500000): 385.460 m
 
 smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader DEM_LatLon_-54.544916_-68.577347_-54.455084_-68.422653.cop30 -54.5 -68.5
 Elev @ (-54.500000, -68.500000): 394.760 m
@@ -320,21 +320,11 @@ RtkGps Parking Lot Values
 
 237.565
 
-smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader parkinglot.3dep 33.837326602 -84.522635213
-Elev @ (33.837327, -84.522635): 238.829 m
-
-smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader 0843139w_334956n_20251008T145803Z_dtm.tif  33.837326602 -84.522635213
-testVerticalDatum: overriding vertical datum with EPSG:4979
-Elev @ (33.837327, -84.522635): 237.731 m
-
-smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader parkinglot.cop30  33.837326602 -84.522635213
-Elev @ (33.837327, -84.522635): 239.794 m
-
 IDW
 
 java -cp ".:lib/*" MaxarDtmReader parkinglot.3dep 33.837326602 -84.522635213
-Elev @ (33.837327, -84.522635): 238.510 m
+Elev @ (33.837327, -84.522635): 238.512 m
 java -cp ".:lib/*" MaxarDtmReader 0843139w_334956n_20251008T145803Z_dtm.tif  33.837326602 -84.522635213
 Elev @ (33.837327, -84.522635): 237.709 m
 java -cp ".:lib/*" MaxarDtmReader parkinglot.cop30  33.837326602 -84.522635213
-Elev @ (33.837327, -84.522635): 239.794 m
+Elev @ (33.837327, -84.522635): 239.777 m

@@ -64,6 +64,7 @@ import com.openathena.core.MathUtils;
 
 public class MaxarDtmReader implements AutoCloseable
 {
+    
     // GeoKey IDs (we parse content; we don't rely on tag IDs)
     private static final int KEY_GeographicTypeGeoKey  = 2048;
     private static final int KEY_ProjectedCSTypeGeoKey = 3072;
@@ -289,7 +290,8 @@ public class MaxarDtmReader implements AutoCloseable
             //System.out.println("dted: s: "+s);
             //System.out.println("dted: e: "+e);
 
-            //System.out.println("dted: resolution "+dted.getResolution().getRows()+","+dted.getResolution().getColumns()+" "+dted.getResolution().getSpacing()+" degrees");
+            //System.out.println("dted: resolution "+dted.getResolution().getRows()+","
+            // +dted.getResolution().getColumns()+" "+dted.getResolution().getSpacing()+" degrees");
             
             this.isDTED = true;
             this.gType = GeoTiffDataType.DTED2;
@@ -304,6 +306,10 @@ public class MaxarDtmReader implements AutoCloseable
 
     } // readDted
 
+    // once DEM has been parsed and loaded, check if vertical CRS was dectected in metadata
+    // and possiblyl override default that was based on file extension
+    // Maxar DTMs have vertical CRS set in GDAL info
+    
     private void testVerticalDatum()
     {
         // default to gType
@@ -318,7 +324,7 @@ public class MaxarDtmReader implements AutoCloseable
             return;
         }
 
-        System.out.println("testVerticalDatum: overriding vertical datum with "+verticalCRS);
+        // System.out.println("testVerticalDatum: overriding vertical datum with "+verticalCRS);
 
         switch (verticalCRS) {
         case "EPSG:3855":
@@ -346,7 +352,7 @@ public class MaxarDtmReader implements AutoCloseable
     } // testVerticalDatum
 
 
-    /* =================== Public API =================== */
+    // public api functions
     
     public String getHorizontalCRS() { return horizontalCRS; }
     public String getVerticalCRS()   { return verticalCRS;   }
@@ -383,7 +389,8 @@ public class MaxarDtmReader implements AutoCloseable
     //     return new Bounds(minX, minY, maxX, maxY);
     // }
 
-    /** Bounds in the raster's native CRS using a center-aware corner convention. */
+    // Bounds in the raster's native CRS using a center-aware corner convention
+    
     public Bounds getBoundsDataCRS()
     {
         requireGeoref("Bounds in data CRS");
@@ -421,7 +428,8 @@ public class MaxarDtmReader implements AutoCloseable
         return new Bounds(minLon, minLat, maxLon, maxLat);
     }
 
-    /** Bounds in WGS84 (lon/lat). */
+    // get bounds in WGS84 (lon/lat) decimal degrees of this DEM
+    
     public Bounds getBoundsWGS84()
     {
         requireGeoref("Bounds in WGS84");
@@ -448,9 +456,9 @@ public class MaxarDtmReader implements AutoCloseable
         return new Bounds(west, south, east, north);
     }
 
-    // use bilinear interpolation
+    // use bilinear interpolation to get elevation at x,y
     
-    public double getElevationProjectedBilinear(double x, double y)
+    private double getElevationProjectedBilinear(double x, double y)
     {
         double[] rc = pixelFromWorld(x, y);
         double col = rc[0], row = rc[1];
@@ -469,7 +477,7 @@ public class MaxarDtmReader implements AutoCloseable
     }
 
 
-    // Convenience: IDW with radius=1 (3x3 window), power=2, epsilon=1e-12.
+    // Convenience: IDW with radius=1 (3x3 window), power=idwPower, epsilon=1e-12.
     // for use with geotiffs only
 
     private double getElevationProjectedIDW(double xData, double yData)
@@ -544,15 +552,28 @@ public class MaxarDtmReader implements AutoCloseable
 
     } // getElevationProjectedIDW
 
-
     // for a lat,lon, use our EGM96 offset provider to return the lat,lon
-    // add these to code once we integrated XXX
-    // public double getEGMOffsetForLatLon(double lat, double lon) 
-    // public double getEGMAltFromLatLon(double lat, double lon)
+
+    public double getEGMOffsetForLatLon(double lat, double lon)
+    {
+        return offsetProvider.getEGMOffsetAtLatLon(lat,lon);
+    }
+
+    // we could be smarter here because many of our altitudes are
+    // in EGM but its too easy to just get the altitude in WGS84 and subtract
+    // the offset; less code to maintain but potentially calls getEGMOffset twice
+    
+    public double getEGMAltFromLatLon(double lat, double lon) throws RequestedValueOOBException, CorruptTerrainException
+    {
+        double wgs84alt = getAltFromLatLon(lat,lon);
+        double offset = getEGMOffsetForLatLon(lat,lon);
+        return wgs84alt - offset;
+    }
 
     // given a DTED, and lat,lon in decimal degrees, return WGS84 altitude
+    // no interpolation; agilesrc dem4j takes the nearest point and returns that elevation
     
-    public double getAltFromLatLonDted(double lat, double lon) throws Exception
+    private double getAltFromLatLonDted(double lat, double lon) throws RequestedValueOOBException, CorruptTerrainException
     {
             Point point = new Point(lat, lon);
             try {
@@ -568,10 +589,13 @@ public class MaxarDtmReader implements AutoCloseable
             } catch (CorruptTerrainException e) {
                 throw new CorruptTerrainException("The terrain data in the DTED file is corrupt.", e);
             } catch (InvalidValueException e) {
-                // throw new RequestedValueOOBException("getAltFromLatLon arguments out of bounds!", lat, lon);
-                throw new Exception("getAltFromLatLon arguments out of bounds!");
+                throw new RequestedValueOOBException("getAltFromLatLon arguments out of bounds!", lat, lon);
             }
     }
+
+    // use inverse distance weight with X neighbors/elevations to calculate altitude
+    // if it turns out that the targetLat,targetLon is exact, return that value instead
+    // of IDW
 
     private double idwInterpolation(double targetLat, double targetLon, Point[] neighbors, double[] elevations, double power)
     {
@@ -590,11 +614,15 @@ public class MaxarDtmReader implements AutoCloseable
             double weight = 1.0d / Math.pow(distance, power);
 
             // System.out.println("idwInterpolation: distance: "+distance+"  weight: "+weight);
-            
-            if ((distance != 0.0) && (weight != Double.POSITIVE_INFINITY)) {
-                sumWeights += weight;
-                sumWeightedElevations += weight * elevations[i];
+
+            // if distance is ~= 0.0 then we got lucky and the point is actually target;
+            // if so, return that alt w/o need to interpolate
+            if (distance <= 0.1) {
+                return elevations[i];
             }
+            
+            sumWeights += weight;
+            sumWeightedElevations += weight * elevations[i];
         }
 
         // System.out.println("idwInterpolation: returning "+sumWeightedElevations / sumWeights);
@@ -602,7 +630,9 @@ public class MaxarDtmReader implements AutoCloseable
         return sumWeightedElevations / sumWeights;
     }
 
-    private double getAltFromLatLonDtedIDW(double lat, double lon) throws Exception
+    // get WGS84 altitude from lat,lon, via DTED, using IDW 
+    
+    private double getAltFromLatLonDtedIDW(double lat, double lon) throws RequestedValueOOBException, CorruptTerrainException
     {
         // target point 
         Point point = new Point(lat, lon);
@@ -674,12 +704,13 @@ public class MaxarDtmReader implements AutoCloseable
         }
     }
 
-    /**
-     * Elevation query for inputs in WGS84 (lat, lon) decimal degrees.
-     * Reprojects to the DTM's native CRS (whatever it is) before sampling.
-     */
+    // main public API for getting elevation for lat,lon
+    // get WGS84 altitude for lat,lon decimal degrees; calls for
+    // both DTED and Geotiff;
+    // uses appropriate IDW with surrounding neighbors to calculate
+    // altitude
 
-    public double getAltFromLatLon(double latDeg, double lonDeg) throws Exception
+    public double getAltFromLatLon(double latDeg, double lonDeg) throws RequestedValueOOBException, CorruptTerrainException
     {
         if (this.isDTED) {
             return getAltFromLatLonDtedIDW(latDeg, lonDeg);
@@ -705,7 +736,7 @@ public class MaxarDtmReader implements AutoCloseable
         double alt = getElevationProjectedIDW(p.x,p.y);
 
         if (Double.isNaN(alt)) {
-            throw new Exception("Terrain data produced NaN");
+            throw new RequestedValueOOBException("getAltFromLatLon args out of bounds due to min/max lat/lon!",latDeg,lonDeg);
         }
 
         // return must be in WGS84 HAE
@@ -1567,6 +1598,8 @@ public class MaxarDtmReader implements AutoCloseable
     {
         boolean verbose = false;
         // instantiate a core to initialize EGM96OffsetProvider
+
+        System.setProperty("slf4j.internal.verbosity", "ERROR");
 
         OpenAthenaCore.CacheDir = Paths.get("/");
         OpenAthenaCore core = new OpenAthenaCore();
