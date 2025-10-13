@@ -1,0 +1,203 @@
+;; This buffer is for text that is not saved, and for Lisp evaluation.
+;; To create a file, visit it with C-x C-f and enter text in its buffer.
+
+smyrna.krupczak.org%java PolarCoordinates 37.7749 -122.4194 30 37.8044 -122.2711 50
+— Coordinates —
+Origin: lat=37.774900 lon=-122.419400 h=30.00 m AMSL
+Target: lat=37.804400 lon=-122.271100 h=50.00 m AMSL
+
+— MGRS —
+Origin MGRS: 10S EG 5113080998
+Target MGRS: 10S EG 6416584363
+
+— TRUE North Reference —
+Definition: Bearing is CLOCKWISE from TRUE (geographic) north; 0° at true north.
+Azimuth TRUE (deg):      75.882786
+Azimuth TRUE (mils6400): 1349.03
+Azimuth TRUE (mrad):     1324.404462
+
+— GRID North (MGRS/UTM) —
+Definition: Bearing is CLOCKWISE from GRID north (local MGRS/UTM grid at origin).
+Grid convergence γ (deg): 0.355660
+Azimuth GRID (deg):       75.527126
+Azimuth GRID (mils6400):  1342.70
+Azimuth GRID (mrad):      1318.197016
+
+— Distance & Vertical —
+Ground distance (m):      13474.119
+Slant range (m):          13474.134
+Elevation angle (deg):    0.085046
+
+-- Internal Haversine Calculations
+Azimuth TRUE (deg):       75.825926
+Ground distance (m):      13453.195
+smyrna.krupczak.org%!javac
+javac PolarCoordinates.java
+PolarCoordinates.java:538: error: unnamed classes are a preview feature and are disabled by default.
+        double range = haversine(lon0, lat0, lon1, lat1, 0 /* XXX ? */ );
+        ^
+  (use --enable-preview to enable unnamed classes)
+PolarCoordinates.java:541: error: class, interface, enum, or record expected
+        System.out.println("\n-- Internal Haversine Calculations");
+        ^
+PolarCoordinates.java:542: error: class, interface, enum, or record expected
+        System.out.printf("Azimuth TRUE (deg):       %.6f%n", bearing);
+        ^
+PolarCoordinates.java:543: error: class, interface, enum, or record expected
+        System.out.printf("Ground distance (m):      %.3f%n", range);
+        ^
+4 errors
+smyrna.krupczak.org%javac PolarCoordinates.java
+smyrna.krupczak.org%
+smyrna.krupczak.org%
+smyrna.krupczak.org%
+smyrna.krupczak.org%java PolarCoordinates 37.7749 -122.4194 30 37.8044 -122.2711 50
+— Coordinates —
+Origin: lat=37.774900 lon=-122.419400 h=30.00 m AMSL
+Target: lat=37.804400 lon=-122.271100 h=50.00 m AMSL
+
+— MGRS —
+Origin MGRS: 10S EG 5113080998
+Target MGRS: 10S EG 6416584363
+
+— TRUE North Reference —
+Definition: Bearing is CLOCKWISE from TRUE (geographic) north; 0° at true north.
+Azimuth TRUE (deg):      75.882786
+Azimuth TRUE (mils6400): 1349.03
+Azimuth TRUE (mrad):     1324.404462
+
+— GRID North (MGRS/UTM) —
+Definition: Bearing is CLOCKWISE from GRID north (local MGRS/UTM grid at origin).
+Grid convergence γ (deg): 0.355660
+Azimuth GRID (deg):       75.527126
+Azimuth GRID (mils6400):  1342.70
+Azimuth GRID (mrad):      1318.197016
+
+(Magnetic outputs skipped: no declination provided. Re-run with 7th arg = declination in degrees EAST positive.)
+
+— Distance & Vertical —
+Ground distance (m): 13474.119
+Slant range   (m):  13474.134
+Elevation angle (deg): 0.085046
+
+-- Internal Haversine Calculations
+Azimuth TRUE (deg):       75.825926
+Ground distance (m):      13453.195
+
+
+smyrna.krupczak.org%java PolarCoordinates 37.7749 -122.4194 30 37.8044 -122.2711 50
+— Coordinates —
+Origin: lat=37.774900 lon=-122.419400 h=30.00 m AMSL
+Target: lat=37.804400 lon=-122.271100 h=50.00 m AMSL
+
+— MGRS —
+Origin MGRS: 10S EG 5113080998
+Target MGRS: 10S EG 6416584363
+
+— TRUE North —
+Definition: Bearing is CLOCKWISE from TRUE (geographic) north; 0° at true north.
+Azimuth TRUE (deg):      75.882786
+Azimuth TRUE (mils6400): 1349.03
+Azimuth TRUE (mrad):     1324.404462
+Ground distance (m):     13474.119
+
+— GRID North (MGRS/UTM) —
+Definition: Bearing is CLOCKWISE from GRID north (local UTM grid at the origin).
+Grid convergence γ (deg): 0.355661
+Azimuth GRID (deg):       75.527125
+Azimuth GRID (mils6400):  1342.70
+Azimuth GRID (mrad):      1318.197012
+
+— Vertical —
+Slant range (m):         13474.134
+Elevation angle (deg):   0.085046
+
+-- Internal Haversine Calculations
+Azimuth TRUE (deg):       75.825926
+Ground distance (m):      13453.195
+
+-------------------------------------------------------------------------------------------
+
+
+smyrna.krupczak.org%java PolarCoordinates 33.82697225182219 -84.5236233021232 0 33.835469082208895 -84.53859478357397 0
+— Coordinates —
+Origin: lat=33.826972 lon=-84.523623 h=0.00 m AMSL
+Target: lat=33.835469 lon=-84.538595 h=0.00 m AMSL
+
+— MGRS —
+Origin MGRS: 16S GC 2917745729
+Target MGRS: 16S GC 2776946638
+
+— TRUE North —
+Definition: Bearing is CLOCKWISE from TRUE (geographic) north; 0° at true north.
+Azimuth TRUE (deg):      304.221948
+Azimuth TRUE (mils6400): 5408.39
+Azimuth TRUE (mrad):     5309.674649
+Ground distance (m):     1675.787
+
+— GRID North (MGRS/UTM) —
+Definition: Bearing is CLOCKWISE from GRID north (local UTM grid at the origin).
+Grid convergence γ (deg): 1.379167
+Azimuth GRID (deg):       302.842781
+Azimuth GRID (mils6400):  5383.87
+Azimuth GRID (mrad):      5285.603642
+
+— Vertical —
+Slant range (m):         1675.787
+Elevation angle (deg):   0.000000
+
+-- Internal Haversine Calculations
+Azimuth TRUE (deg):       304.345667
+Ground distance (m):      1676.692
+smyrna.krupczak.org%
+smyrna.krupczak.org%
+smyrna.krupczak.org%./va
+
+validate_grid_true_minus_gamma.sh* validate_grid_utm_step.sh*         
+smyrna.krupczak.org%./validate_grid_utm_step.sh 33.82697225182219 -84.5236233021232 0 33.835469082208895 -84.53859478357397 0
+Usage: ./validate_grid_utm_step.sh LAT0 LON0 LAT1 LON1 [STEP_M]
+smyrna.krupczak.org%./validate_grid_utm_step.sh 33.82697225182219 -84.5236233021232 33.835469082208895 -84.53859478357397 
+Inputs:
+  Origin:  lat=33.82697225182219  lon=-84.5236233021232
+  Target:  lat=33.835469082208895  lon=-84.53859478357397
+  Step:    1 m
+
+Results (degrees):
+  True azimuth:     304.221948001820
+  Grid azimuth:     302.735226274917
+
+UTM context:
+  Zone:             16
+  Hemisphere:       N
+smyrna.krupczak.org%
+smyrna.krupczak.org%./validate_grid_ 33.82697225182219 -84.5236233021232 33.835469082208895 -84.53859478357397
+validate_grid_true_minus_gamma.sh* validate_grid_utm_step.sh*         
+smyrna.krupczak.org%./validate_grid_true_minus_gamma.sh  33.82697225182219 -84.5236233021232 33.835469082208895 -84.53859478357397
+Inputs:
+  Origin:  lat=33.82697225182219  lon=-84.5236233021232
+  Target:  lat=33.835469082208895  lon=-84.53859478357397
+
+Results (degrees):
+  True azimuth:     304.221948001820
+  Convergence γ:    1.379170000000
+  Grid azimuth:     302.842778001820
+
+
+smyrna.krupczak.org%echo "33.82697225182219 -84.5236233021232 33.835469082208895 -84.53859478357397" | geod +ellps=WGS84 -f "%.8f"
+33.82633917	-84.52413179	-146.16481398
+smyrna.krupczak.org%echo "33.82697225182219 -84.5236233021232 33.835469082208895 -84.53859478357397" | invgeod -I +ellps=WGS84 -f "%.8f"
+-55.77805200	124.21361265	1675.966
+
+-------------------------------------------------------------------------------------------
+
+Azimuth TRUE (deg):      304.221948
+Azimuth TRUE (mrad):     5309.674649
+Ground distance (m):     1675.787
+Azimuth GRID (deg):       302.842781
+Azimuth GRID (mrad):      5285.603642
+Azimuth TRUE (deg):       304.345667
+(Haversine) Ground distance (m):      1676.692
+
+True azimuth:     304.221948001820
+Grid azimuth:     302.735226274917
+

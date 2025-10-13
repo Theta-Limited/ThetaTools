@@ -1,0 +1,340 @@
+
+
+Maxar files
+
+- 0843139w_334956n_20251008T145803Z_dtm.tif
+(Parking lot area)
+
+    Upper Left: (-84.52728056, 33.84010556)
+    Lower Left: (-84.52750833, 33.83221389)
+    Upper Right: (-84.51436944, 33.83984722)
+    Lower Right: (-84.51460000, 33.83195278)
+    Center: (-84.52093889, 33.83603056)
+
+smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader 0843139w_334956n_20251008T145803Z_dtm.tif
+Bounds (WGS84): minX=-84.527507, minY=33.831953, maxX=-84.514370, maxY=33.840106
+
+- 0842817w_335208n_20240625T103416Z_dtm.tif
+(Smyrna near Battery)
+
+    Upper Left: (-84.47030833, 33.90290278)
+    Lower Left: (-84.47131389, 33.86883889)
+    Upper Right: (-84.47016667, 33.90290000)
+    Lower Right: (-84.47117222, 33.86883611)
+    Center: (-84.47074167, 33.88586944)
+
+smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader 0842817w_335208n_20240625T103416Z_dtm.tif 
+Bounds (data/pixel): minX=733906.250, minY=3750490.750, maxX=733919.250, maxY=3754271.250
+Bounds (WGS84): minX=-84.471, minY=33.869, maxX=-84.470, maxY=33.903
+
+----------------------
+
+smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader 0843139w_334956n_20251008T145803Z_dtm.tif 33.83603056 -84.52093889
+Elev @ (-84.520939, 33.836031): 244.316 m
+
+smyrna.krupczak.org%gdallocationinfo -wgs84 -valonly -b 1 0843139w_334956n_20251008T145803Z_dtm.tif -84.52093889 33.83603056
+244.318115234375
+
+smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader parkinglot.3dep 33.83603056 -84.52093889
+Elev @ (33.836031, -84.520939): 246.524 m
+
+
+smyrna.krupczak.org%java -cp ".:lib/*" GeoTiffAltitudeLookup 33.83603056 -84.52093889
+interpolatedAltitude at (33.836031, -84.520939) is 277.133026 meters.
+
+smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader 0843139w_334956n_20251008T145803Z_dtm.tif 33.83603056 -84.52093889
+Elev @ (33.836031, -84.520939): 244.313 m
+
+smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader 0843139w_334956n_20251008T145803Z_dtm.tif 33.837326602 -84.522635213
+Elev @ (33.837327, -84.522635): 237.731 m
+
+smyrna.krupczak.org%java -cp ".:lib/*" GeoTiffAltitudeLookup parkinglot.3dep 33.837326602 -84.522635213
+interpolatedAltitude at (33.837327, -84.522635) is 269.638489 meters.
+
+smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader parkinglot.3dep  33.837326602 -84.522635213
+Elev @ (33.837327, -84.522635): 269.437 m
+
+-------------------------------------------
+
+parkinglot.3dep
+
+smyrna.krupczak.org%gdalinfo parkinglot.3dep 
+Driver: GTiff/GeoTIFF
+Files: parkinglot.3dep
+Size is 1752, 1455
+Coordinate System is:
+GEOGCRS["NAD83",
+    DATUM["North American Datum 1983",
+        ELLIPSOID["GRS 1980",6378137,298.257222101004,
+            LENGTHUNIT["metre",1]]],
+    PRIMEM["Greenwich",0,
+        ANGLEUNIT["degree",0.0174532925199433]],
+    CS[ellipsoidal,2],
+        AXIS["geodetic latitude (Lat)",north,
+            ORDER[1],
+            ANGLEUNIT["degree",0.0174532925199433]],
+        AXIS["geodetic longitude (Lon)",east,
+            ORDER[2],
+            ANGLEUNIT["degree",0.0174532925199433]],
+    ID["EPSG",4269]]
+Data axis to CRS axis mapping: 2,1
+Origin = (-84.603055486417119,33.904074047116453)
+Pixel Size = (0.000092592592660,-0.000092592592660)
+Metadata:
+  AREA_OR_POINT=Area
+Image Structure Metadata:
+  COMPRESSION=DEFLATE
+  INTERLEAVE=BAND
+Corner Coordinates:
+Upper Left  ( -84.6030555,  33.9040740) ( 84d36'11.00"W, 33d54'14.67"N)
+Lower Left  ( -84.6030555,  33.7693518) ( 84d36'11.00"W, 33d46' 9.67"N)
+Upper Right ( -84.4408333,  33.9040740) ( 84d26'27.00"W, 33d54'14.67"N)
+Lower Right ( -84.4408333,  33.7693518) ( 84d26'27.00"W, 33d46' 9.67"N)
+Center      ( -84.5219444,  33.8367129) ( 84d31'19.00"W, 33d50'12.17"N)
+Band 1 Block=512x512 Type=Float32, ColorInterp=Gray
+  NoData Value=-999999
+
+myrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader parkinglot.3dep
+MaxarDtmReader: n,s,e,w = 33.90407404711646,33.76935182479628,-84.44083326407642,-84.60305548641712
+Size: 1752 x 1455
+Georeferenced: true
+Data CRS: EPSG:4269
+Horizontal CRS: EPSG:4269
+Vertical CRS: EPSG:0
+Bounds (data/pixel): minX=-84.603055, minY=33.769352, maxX=-84.440833, maxY=33.904074
+Bounds (WGS84): minX=-84.603055, minY=33.769352, maxX=-84.440833, maxY=33.904074
+
+smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader parkinglot.3dep 
+MaxarDtmReader: n,s,e,w = 33.90407404711646,33.76935182479628,-84.44083326407642,-84.60305548641712
+smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader parkinglot.3dep
+MaxarDtmReader: n,s,e,w = 33.90407404711646,33.76935182479628,-84.44083326407642,-84.60305548641712
+
+-------------------------------------------
+
+parrot-cairn-dem.eudtm
+
+smyrna.krupczak.org%gdalinfo -json parrot-cairn-dem.eudtm 
+  "wgs84Extent":{
+    "type":"Polygon",
+    "coordinates":[
+      [
+        [
+          -3.0312914,
+          47.6344865
+        ],
+        [
+          -2.9919944,
+          47.4806542
+        ],
+        [
+          -2.7651954,
+          47.5076683
+        ],
+        [
+          -2.8038421,
+          47.6615939
+        ],
+        [
+          -3.0312914,
+          47.6344865
+        ]
+      ]
+
+MaxarDtmReader: n,s,e,w = 47.66159387687518,47.48065424351344,-2.765195364101172,-3.031291417398372
+Size: 577 x 580
+Georeferenced: true
+Data CRS: EPSG:3035
+Horizontal CRS: EPSG:3035
+Vertical CRS: EPSG:0
+Bounds (data/pixel): minX=3346860.000000, minY=2793280.000000, maxX=3364170.000000, maxY=2810680.000000
+Bounds (WGS84): minX=-3.031291, minY=47.480654, maxX=-2.765195, maxY=47.661594
+
+smyrna.krupczak.org%java -cp ".:lib/*" GeoTiffAltitudeLookup parrot-cairn-dem.eudtm 0 0
+
+Bounding Box in WGS84 (lat,lon):
+Upper Left (UL):    (lat: 47.634595, lon: -3.031522)
+Upper Right (UR):   (lat: 47.661703, lon: -2.804073)
+Lower Left (LL):    (lat: 47.480763, lon: -2.992225)
+Lower Right (LR):   (lat: 47.507778, lon: -2.765425)
+geotiff: n: 47.634595
+geotiff: w: -3.031522
+geotiff: s: 47.480763
+geotiff: e: -2.765425
+
+smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader parrot-cairn-dem.eudtm
+MaxarDtmReader: n,s,e,w = 47.66159387687518,47.48065424351344,-2.765195364101172,-3.031291417398372
+smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader parrot-cairn-dem.eudtm
+MaxarDtmReader: n,s,e,w = 47.66159387687518,47.48065424351344,-2.765195364101172,-3.031291417398372
+
+-------------------------------------------
+
+parkinglot.srtm
+
+smyrna.krupczak.org%java -cp ".:lib/*" GeoTiffAltitudeLookup parkinglot.srtm 0 0
+geotiff: n: 33.926667
+geotiff: w: -84.630556
+geotiff: s: 33.746944
+geotiff: e: -84.414167
+
+smyrna.krupczak.org%gdalinfo -json parkinglot.srtm 
+ "wgs84Extent":{
+    "type":"Polygon",
+    "coordinates":[
+      [
+        [
+          -84.6304167,
+          33.9265278
+        ],
+        [
+          -84.6304167,
+          33.7468056
+        ],
+        [
+          -84.4140278,
+          33.7468056
+        ],
+        [
+          -84.4140278,
+          33.9265278
+        ],
+        [
+          -84.6304167,
+          33.9265278
+        ]
+      ]
+    ]
+  },
+
+smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader parkinglot.srtm 
+MaxarDtmReader: n,s,e,w = 33.926527777774325,33.74680555555208,-84.41402777776513,-84.63041666665404
+smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader parkinglot.srtm
+MaxarDtmReader: n,s,e,w = 33.926527777774325,33.74680555555208,-84.41402777776513,-84.63041666665404
+
+--------------------------------------------------
+
+testing eudtm and cop30
+
+smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader -v DEM_LatLon_51.392738_23.215802_51.572769_23.504895.cop30 51.482116 23.362055
+Size: 1041 x 648
+Georeferenced: true
+Horizontal CRS: EPSG:4326
+Vertical CRS: EPSG:0
+MaxarDtmReader: n,s,e,w = 51.572777788888885,51.392777788888885,23.504999988888894,23.215833322222228
+MaxarDtmReader: isDTED false
+MaxarDtmReader: gType is COP30
+Elev @ (51.482116, 23.362055): 208.316 m
+
+smyrna.krupczak.org%java -cp ".:lib/*" GeoTiffAltitudeLookup DEM_LatLon_51.392738_23.215802_51.572769_23.504895.cop30 51.482116 23.362055
+51.482116,23.362055 is in USA? false
+51.482116,23.362055 is in Europe? true
+Model Pixel Scale: (0.000278, 0.000278)
+Model Tie Point: (23.215833, 51.572778, 0.000000)
+Size is 1041,648
+Horizontal Datum: EPSG:4326
+Vertical Datum is EPSG:0
+Native CRS Corners:
+Upper Left (UL):    (23.215694, 51.572917)
+Lower Left (LL):    (23.215694, 51.392917)
+Upper Right (UR):   (23.504861, 51.572917)
+Lower Right (LR):   (23.504861, 51.392917)
+geotiff: n: 51.572917
+geotiff: w: 23.215694
+geotiff: s: 51.392917
+geotiff: e: 23.504861
+GeoTIFF is already in WGS84. No conversion needed.
+Raster Pixel Indices: (X: 526, Y: 326)
+Altitude at (51.482116, 23.362055) is 180.881241 meters.
+interpolatedAltitude at (51.482116, 23.362055) is 180.881241 meters.  (Egm)
+
+smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader ~/repos/OpenAthenaCore/core/src/main/resources/test-poland.eudtm 51.482116 23.362055
+MaxarDtmReader: n,s,e,w = 51.60519264744455,51.360701082821805,23.557213565125494,23.16467921735574
+Size: 778 x 780
+Georeferenced: true
+Data CRS: EPSG:3035
+Horizontal CRS: EPSG:3035
+Vertical CRS: EPSG:0
+Bounds (data/pixel): minX=5231460.000000, minY=3225520.000000, maxX=5254800.000000, maxY=3248920.000000
+Bounds (WGS84): minX=23.164679, minY=51.360701, maxX=23.557214, maxY=51.605193
+Elev @ (51.482116, 23.362055): 167.722 m (orthometric)
+Geoid 2008 height: 28.67
+Geoid 2006 height: 29.01 
+HAE height: 196.389
+
+----------------------------------------
+
+DTED2
+
+smyrna.krupczak.org%gdalinfo -json ~/repos/OpenAthenaCore/core/src/main/resources/DEM_LatLon_-55.0_-69.0_-54.0_-68.0.dt2
+
+ "wgs84Extent":{
+    "type":"Polygon",
+    "coordinates":[
+      [
+        [
+          -69.0002778,
+          -53.9998611
+        ],
+        [
+          -69.0002778,
+          -55.0001389
+        ],
+        [
+          -67.9997222,
+          -55.0001389
+        ],
+        [
+          -67.9997222,
+          -53.9998611
+        ],
+        [
+          -69.0002778,
+          -53.9998611
+        ]
+      ]
+
+smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader ~/repos/OpenAthenaCore/core/src/main/resources/DEM_LatLon_-55.0_-69.0_-54.0_-68.0.dt2
+DEM_LatLon_-55.0_-69.0_-54.0_-68.0.dt2 is DTED
+Georeferenced: false
+Horizontal CRS: null
+Vertical CRS: null
+MaxarDtmReader: n,s,e,w = -54.0,-55.0,-68.0,-69.0
+MaxarDtmReader: isDTED true
+
+java -cp ".:lib/*" MaxarDtmReader ~/repos/OpenAthenaCore/core/src/main/resources/DEM_LatLon_-55.0_-69.0_-54.0_-68.0.dt2 -54.5 -68.5
+Elev @ (-54.500000, -68.500000): 385.460 m
+
+IDW interpolation
+
+smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader ~/repos/OpenAthenaCore/core/src/main/resources/DEM_LatLon_-55.0_-69.0_-54.0_-68.0.dt2 -54.5 -68.5
+Elev @ (-54.500000, -68.500000): 382.070 m
+
+smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader DEM_LatLon_-54.544916_-68.577347_-54.455084_-68.422653.cop30 -54.5 -68.5
+Elev @ (-54.500000, -68.500000): 394.760 m
+
+smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader DEM_LatLon_-54.544916_-68.577347_-54.455084_-68.422653.srtm -54.5 -68.5
+Elev @ (-54.500000, -68.500000): 385.460 m
+
+---------------------------------------------------------
+
+RtkGps Parking Lot Values
+
+237.565
+
+smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader parkinglot.3dep 33.837326602 -84.522635213
+Elev @ (33.837327, -84.522635): 238.829 m
+
+smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader 0843139w_334956n_20251008T145803Z_dtm.tif  33.837326602 -84.522635213
+testVerticalDatum: overriding vertical datum with EPSG:4979
+Elev @ (33.837327, -84.522635): 237.731 m
+
+smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader parkinglot.cop30  33.837326602 -84.522635213
+Elev @ (33.837327, -84.522635): 239.794 m
+
+IDW
+
+java -cp ".:lib/*" MaxarDtmReader parkinglot.3dep 33.837326602 -84.522635213
+Elev @ (33.837327, -84.522635): 238.510 m
+java -cp ".:lib/*" MaxarDtmReader 0843139w_334956n_20251008T145803Z_dtm.tif  33.837326602 -84.522635213
+Elev @ (33.837327, -84.522635): 237.709 m
+java -cp ".:lib/*" MaxarDtmReader parkinglot.cop30  33.837326602 -84.522635213
+Elev @ (33.837327, -84.522635): 239.794 m
