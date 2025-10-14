@@ -331,6 +331,16 @@ Elev @ (33.837327, -84.522635): 239.777 m
 smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader parkinglot.srtm 33.837326602 -84.522635213
 Elev @ (33.837327, -84.522635): 242.085 m
 
+smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader parkinglot.srtm 33.837326602 -84.522635213
+Elev @ (33.837327, -84.522635): 242.085 m
+smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader parkinglot.cop30 33.837326602 -84.522635213
+Elev @ (33.837327, -84.522635): 237.777 m
+smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader parkinglot.3dep 33.837326602 -84.522635213
+Elev @ (33.837327, -84.522635): 238.512 m
+smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader parkinglot.max 33.837326602 -84.522635213
+Elev @ (33.837327, -84.522635): 237.709 m
+
+
 ---------------------------------------------------------
 
 Loading times

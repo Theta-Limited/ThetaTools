@@ -65,9 +65,14 @@ import com.openathena.core.MathUtils;
 public class MaxarDtmReader implements AutoCloseable
 {
     
-    // GeoKey IDs (we parse content; we don't rely on tag IDs)
+    // GeoKey IDs 
     private static final int KEY_GeographicTypeGeoKey  = 2048;
     private static final int KEY_ProjectedCSTypeGeoKey = 3072;
+    private static final int TAG_ModelPixelScale     = 33550;
+    private static final int TAG_ModelTiepoint       = 33922;
+    private static final int TAG_ModelTransformation = 34264;
+    private static final int TAG_GDAL_METADATA       = 42112;
+    private static final int TAG_GDAL_NODATA         = 42113;
 
     private static final double idwPower = 1.875d;
 
@@ -104,6 +109,9 @@ public class MaxarDtmReader implements AutoCloseable
     private final CoordinateTransformFactory ctf = new CoordinateTransformFactory();
     // Tiny cache so we don’t rebuild transforms for repeated calls
     private Map<String, CoordinateTransform> reprojCache = new java.util.HashMap<>();
+
+    // once we've picked a directory, keep map of its tag to entry mapping
+    private Map<Integer,FileDirectoryEntry> directoryIndexTags = new HashMap<Integer,FileDirectoryEntry>();
     
     // corners of the bounding box calculated from the GeoTiff or DTED, not
     // from the filename; lat,lon 
@@ -164,27 +172,32 @@ public class MaxarDtmReader implements AutoCloseable
         // Gather all IFDs (root + subIFDs if exposed)
         List<FileDirectory> all = collectAllDirectories(tiff);
 
-        // Pick best: prefer georef; else largest area
+        // System.out.println("readGeoFile: number of directories is "+all.size());
+        // could be multiple directories; examine and pick best (that has georeference)
+        
         FileDirectory picked = null;
         long bestArea = -1;
         boolean bestHas = false;
         for (FileDirectory d : all) {
-            int w = toInt(d.getImageWidth());
-            int h = toInt(d.getImageHeight());            
+            int w = d.getImageWidth().intValue();
+            int h = d.getImageHeight().intValue();
+            //System.out.println("Examining directory "+d);
             long area = (long) w * (long) h;
             boolean has = hasAnyGeorefSignature(d);
             if (picked == null || (has && !bestHas) || (has == bestHas && area > bestArea)) {
                 picked = d; bestArea = area; bestHas = has;
+                // System.out.println("Picked best");
+                break; // no need to continue
             }
         }
 
         if (picked == null) picked = tiff.getFileDirectory();
         this.dir = picked;
         this.centerAnchored = isCenterAnchored(dir);
-        this.width  = toInt(dir.getImageWidth());
-        this.height = toInt(dir.getImageHeight());
+        this.width  = dir.getImageWidth().intValue();
+        this.height = dir.getImageHeight().intValue();
 
-        // Build affine: getters → signatures → GDAL_METADATA
+        // Build affine params for mapping between x,y and pixel array
         AffineParams ap = tryBuildAffineRobust(dir);
         if (ap != null) {
             setAffine(ap.a0, ap.a1, ap.a2, ap.b0, ap.b1, ap.b2);
@@ -195,25 +208,12 @@ public class MaxarDtmReader implements AutoCloseable
             System.err.println("[MaxarDtmReader] No georeferencing found; operating in pixel space.");
         }
 
-        this.noData = tryReadNoDataRobust(dir);
+        // this.noData = tryReadNoDataRobust(dir);
         this.rasters = dir.readRasters();
 
         // Horizontal & vertical CRS/datum detection
         this.horizontalCRS = determineHorizontalCRS(dir);
         this.verticalCRS = determineVerticalCRS(dir);
-
-        // Raster access methods
-        // Method g1 = null, g2 = null, g3 = null, g4 = null;
-        // for (Method m : Rasters.class.getMethods()) {
-        //     if (m.getName().equals("getPixelSampleDouble") && m.getParameterCount() == 3) g1 = m;
-        //     if (m.getName().equals("getFirstPixelSample")  && m.getParameterCount() == 2) g2 = m;
-        //     if (m.getName().equals("getPixelSample")       && m.getParameterCount() == 3) g3 = m; // returns Number
-        //     if (m.getName().equals("getPixel")             && m.getParameterCount() == 2) g4 = m; // returns pixel samples            
-        // }
-        // this.mGetPixelSampleDouble = g1;
-        // this.mGetFirstPixelSample  = g2;
-        // this.mGetPixelSample       = g3;
-        // this.mGetPixel             = g4;
 
         if (georeferenced) {
             // Prefer the horizontal CRS we parsed earlier
@@ -346,7 +346,7 @@ public class MaxarDtmReader implements AutoCloseable
     public int getHeight() { return height; }
     public boolean isGeoreferenced() { return georeferenced; }
     public String getDataEpsg() { return dataEpsg; }
-    public Optional<Double> getNoData() { return Optional.ofNullable(noData); }
+    // public Optional<Double> getNoData() { return Optional.ofNullable(noData); }
     public String getVerticalDatum() { return verticalDatum; }
 
     public String getHorizontalDatum() { return gType.getHorizDatum(); }
@@ -741,11 +741,6 @@ public class MaxarDtmReader implements AutoCloseable
     @Override public void close() {}
 
     // internal methods for parsing/manipulating GeoTiff
-    private static final int TAG_ModelPixelScale     = 33550;
-    private static final int TAG_ModelTiepoint       = 33922;
-    private static final int TAG_ModelTransformation = 34264;
-    private static final int TAG_GDAL_METADATA       = 42112;
-    private static final int TAG_GDAL_NODATA         = 42113;
 
     private static double[] readDoubleArrayTag(Map<Integer,FileDirectoryEntry> t, int tagId)
     {
@@ -800,46 +795,24 @@ public class MaxarDtmReader implements AutoCloseable
         if (!georeferenced) throw new IllegalStateException(op + " requires georeferencing.");
     }
 
-    private static int toInt(Object n) {
-        if (n instanceof Number) return ((Number)n).intValue();
-        throw new IllegalStateException("Expected Number, got " + (n==null?"null":n.getClass()));
-    }
-
     private static Number invokeNumberGetterFallback(Object target, String primary, String secondary) throws Exception {
         try { return (Number) target.getClass().getMethod(primary).invoke(target); }
         catch (NoSuchMethodException e) { return (Number) target.getClass().getMethod(secondary).invoke(target); }
     }
 
-    private static List<FileDirectory> collectAllDirectories(Object tiffImage)
+    private static List<FileDirectory> collectAllDirectories(TIFFImage tiffImage)
     {
-        List<FileDirectory> out = new ArrayList<>();
-        try { var m=tiffImage.getClass().getMethod("getFileDirectory"); Object v=m.invoke(tiffImage); if (v instanceof FileDirectory) out.add((FileDirectory)v); } catch (Exception ignore) {}
-        try { var m=tiffImage.getClass().getMethod("getFileDirectories"); Object v=m.invoke(tiffImage);
-              if (v instanceof Collection<?>) for (Object o:(Collection<?>)v) if (o instanceof FileDirectory) out.add((FileDirectory)o);
-        } catch (Exception ignore) {}
-        // subIFDs (best-effort)
-        Set<FileDirectory> seen = new HashSet<>(out);
-        Deque<FileDirectory> st = new ArrayDeque<>(out);
-        while (!st.isEmpty()) {
-            FileDirectory d = st.pop();
-            for (String name : new String[]{"getSubIFDs","getSubFileDirectories","getSubDirectories"}) {
-                try {
-                    var m = d.getClass().getMethod(name);
-                    Object v = m.invoke(d);
-                    if (v instanceof Collection<?>)
-                        for (Object o : (Collection<?>) v)
-                            if (o instanceof FileDirectory && seen.add((FileDirectory)o)) { out.add((FileDirectory)o); st.push((FileDirectory)o); }
-                } catch (Exception ignore) {}
-            }
-        }
-        return out;
+        return tiffImage.getFileDirectories();
     }
 
-    /* ===== Robust georef detection (handles List<?> etc.) ===== */
+    // PixelIsPoint ⇒ center-anchored; PixelIsArea ⇒ corner-anchored. Default: Area (false).
 
-    /** PixelIsPoint ⇒ center-anchored; PixelIsArea ⇒ corner-anchored. Default: Area (false). */
     private boolean isCenterAnchored(FileDirectory d)
     {
+        if (directoryIndexTags.size() == 0) {
+            indexDirectoryTags(d);
+        }
+        
         // Prefer GDAL metadata if present
         gdal = findGdalMetadata(d);
         if (gdal != null) {
@@ -856,7 +829,8 @@ public class MaxarDtmReader implements AutoCloseable
             if (u.contains("AREA_OR_POINT=AREA"))  return false;
         }
         // Heuristic: a single tiepoint at (i,j) ≈ (0.5,0.5) is also a strong signal for center
-        double[] tp = tryGetModelTiepoint(d);
+        // double[] tp = tryGetModelTiepoint(d);
+        double[] tp   = readDoubleArrayTag(directoryIndexTags, TAG_ModelTiepoint);        
         if (tp != null && tp.length >= 2) {
             double i = tp[0], j = tp[1];
             if (Math.abs(i - 0.5) < 1e-9 && Math.abs(j - 0.5) < 1e-9) return true;
@@ -864,13 +838,34 @@ public class MaxarDtmReader implements AutoCloseable
         return false;
     }
 
-
-    private static boolean hasAnyGeorefSignature(FileDirectory d)
+    // does this tiff/dir have any georef signatures
+    // srtm,cop30,3dep have model pixel scale and tiepoints
+    // max has double16matrix and gdal metadata
+    
+    private boolean hasAnyGeorefSignature(FileDirectory d)
     {
-        if (tryGetModelPixelScale(d) != null && tryGetModelTiepoint(d) != null) return true;
-        if (tryGetModelTransformation(d) != null) return true;
-        if (findDouble16Matrix(d) != null) return true;
-        if (extractGeoTransformFromGdalMetadata(d) != null) return true;
+        if (directoryIndexTags.size() == 0) {
+            indexDirectoryTags(d);
+        }
+            
+        if ((readDoubleArrayTag(directoryIndexTags, TAG_ModelPixelScale) != null) && 
+            (readDoubleArrayTag(directoryIndexTags, TAG_ModelTiepoint) != null)) {
+            // System.out.println("hasAnyGeorefSignature: model tie point and pixel scale");
+            return true;
+        }
+        
+        if (findDouble16Matrix(d) != null) {
+            // System.out.println("hasAnyGeorefSignature: double16 matrix");
+            return true;
+        }
+        
+        if (extractGeoTransformFromGdalMetadata(d) != null) {
+            // System.out.println("hasAnyGeorefSignature: gdal metadata");            
+            return true;
+        }
+
+        //System.out.println("hasAnyGeorefSignature: no");
+        
         return false;
     }
 
@@ -955,11 +950,14 @@ public class MaxarDtmReader implements AutoCloseable
     
     private AffineParams tryBuildAffineRobust(FileDirectory d)
     {
-        var tags = indexTags(d);
+        if (directoryIndexTags.size() == 0) {
+            indexDirectoryTags(d);
+        }
         
         // 1) Preferred: GDAL <GeoTransform> (exactly matches gdalinfo)
         double[] gt = extractGeoTransformFromGdalMetadata(d);    // your existing helper
         if (gt != null && gt.length == 6) {
+            // System.out.println("tryBuildAffineRobust: using geoTransform from gdal");
             return new AffineParams(gt[0], gt[1], gt[2], gt[3], gt[4], gt[5]);
         }
 
@@ -967,8 +965,8 @@ public class MaxarDtmReader implements AutoCloseable
         //double[] scale = tryGetModelPixelScale(d);               // your existing helper
         //double[] tie   = tryGetModelTiepoint(d);                 // your existing helper
 
-        double[] scale = readDoubleArrayTag(tags, TAG_ModelPixelScale);
-        double[] tie   = readDoubleArrayTag(tags, TAG_ModelTiepoint);
+        double[] scale = readDoubleArrayTag(directoryIndexTags, TAG_ModelPixelScale);
+        double[] tie   = readDoubleArrayTag(directoryIndexTags, TAG_ModelTiepoint);
 
         if (scale != null && scale.length >= 2 && tie != null && tie.length >= 6) {
             double sx = scale[0], sy = scale[1];
@@ -986,22 +984,25 @@ public class MaxarDtmReader implements AutoCloseable
             }
 
             // North-up (no rotation) assumption for Scale+Tiepoint
+            // System.out.println("tryBuildAffineRobust: using scale and tiepoints");
             return new AffineParams(originX, sx, 0.0, originY, 0.0, -sy);
         }
 
         // 3) ModelTransformation (4×4) → shift center→corner
-        double[] mt = tryGetModelTransformation(d);              // your existing helper
-        if (mt != null && mt.length == 16) {
-            double a1 = mt[0], a2 = mt[1], a0 = mt[3];
-            double b1 = mt[4], b2 = mt[5], b0 = mt[7];
-            double adjA0 = a0 - 0.5 * a1 - 0.5 * a2;
-            double adjB0 = b0 - 0.5 * b1 - 0.5 * b2;
-            return new AffineParams(adjA0, a1, a2, adjB0, b1, b2);
-        }
+        // double[] mt = tryGetModelTransformation(d);              // your existing helper
+        // System.out.println("tryGetModelTransformation returned "+mt);
+        // if (mt != null && mt.length == 16) {
+        //     double a1 = mt[0], a2 = mt[1], a0 = mt[3];
+        //     double b1 = mt[4], b2 = mt[5], b0 = mt[7];
+        //     double adjA0 = a0 - 0.5 * a1 - 0.5 * a2;
+        //     double adjB0 = b0 - 0.5 * b1 - 0.5 * b2;
+        //     return new AffineParams(adjA0, a1, a2, adjB0, b1, b2);
+        // }
 
         // 4a) Scan for another 16-dbl matrix and normalize the same way
         double[] mt2 = findDouble16Matrix(d);                    // your existing helper
         if (mt2 != null && mt2.length == 16) {
+            //System.out.println("tryBuildAffineRobust: using double 16 matrix");
             double a1 = mt2[0], a2 = mt2[1], a0 = mt2[3];
             double b1 = mt2[4], b2 = mt2[5], b0 = mt2[7];
             double adjA0 = a0 - 0.5 * a1 - 0.5 * a2;
@@ -1010,6 +1011,8 @@ public class MaxarDtmReader implements AutoCloseable
         }
 
         // 4b) Scan for scale/tie arrays and normalize like (2)
+        // should have already been found above
+        
         double[] s2 = findScaleArray(d), t2 = findTiepointArray(d); // your existing helpers
         if (s2 != null && s2.length >= 2 && t2 != null && t2.length >= 6) {
             double sx = s2[0], sy = s2[1];
@@ -1022,35 +1025,20 @@ public class MaxarDtmReader implements AutoCloseable
                 originX -= 0.5 * sx;
                 originY += 0.5 * sy;
             }
+            //System.out.println("tryBuildAffineRobust: using discovered scale and tiepoint");
             return new AffineParams(originX, sx, 0.0, originY, 0.0, -sy);
         }
 
         return null; // no usable georef found
     }
-    
-    private static double[] tryGetModelPixelScale(FileDirectory d) { return getDoubleArrayViaGetter(d, "getModelPixelScale"); }
-    private static double[] tryGetModelTiepoint(FileDirectory d)   { return getDoubleArrayViaGetter(d, "getModelTiepoint"); }
-    private static double[] tryGetModelTransformation(FileDirectory d){ return getDoubleArrayViaGetter(d, "getModelTransformation"); }
 
-    private static double[] getDoubleArrayViaGetter(FileDirectory d, String method) {
-        try {
-            var m = d.getClass().getMethod(method);
-            Object v = m.invoke(d);
-            return toDoubleArray(v);
-        } catch (NoSuchMethodException ignore) {
-        } catch (Exception e) {
-            // ignore
-        }
-        return null;
-    }
-
-    private static Map<Integer, FileDirectoryEntry> indexTags(FileDirectory d)
+    // for the chosen directory, add mapping of directory entries to tag IDs
+    private void indexDirectoryTags(FileDirectory d)
     {
-        Map<Integer, FileDirectoryEntry> map = new HashMap<>();
+        // Map<Integer, FileDirectoryEntry> map = new HashMap<>();
         for (FileDirectoryEntry e : d.getEntries()) {
-            map.put(e.getFieldTag().getId(), e);
+            directoryIndexTags.put(e.getFieldTag().getId(), e);
         }
-        return map;
     }
 
     private static Double tryReadNoDataRobust(FileDirectory d) {
@@ -1073,11 +1061,11 @@ public class MaxarDtmReader implements AutoCloseable
         return null;
     }
 
-    private static String detectEpsgRobust(FileDirectory d) {
+    private static String detectEpsgRobust(FileDirectory d)
+    {
+        Integer epsg;
+        
         // 1) Typed GeoKeyDirectory getter if present
-        Object gk = getObjectViaGetter(d, "getGeoKeyDirectory");
-        Integer epsg = parseGeoKeyDirectoryToEpsg(gk);
-        if (epsg != null) return "EPSG:" + epsg;
 
         // 2) Scan entries for a vector that looks like a GeoKeyDirectory header (1,1,0,numKeys)
         for (FileDirectoryEntry e : safeEntries(d)) {
@@ -1087,13 +1075,8 @@ public class MaxarDtmReader implements AutoCloseable
         return null;
     }
 
-    private static Object getObjectViaGetter(FileDirectory d, String method) {
-        try { var m=d.getClass().getMethod(method); return m.invoke(d); }
-        catch (NoSuchMethodException ignore) { return null; }
-        catch (Exception e) { return null; }
-    }
-
-    private static Integer parseGeoKeyDirectoryToEpsg(Object v) {
+    private static Integer parseGeoKeyDirectoryToEpsg(Object v)
+    {
         if (v == null) return null;
         int[] shorts = toUInt16Array(v);
         if (shorts == null || shorts.length < 4) return null;
@@ -1114,7 +1097,8 @@ public class MaxarDtmReader implements AutoCloseable
 
     // ---- content-signature scanners (handle List etc.) 
 
-    private static double[] findDouble16Matrix(FileDirectory d) {
+    private static double[] findDouble16Matrix(FileDirectory d)
+    {
         for (FileDirectoryEntry e : safeEntries(d)) {
             double[] m = toDoubleArray(e.getValues());
             if (m != null && m.length == 16) {
@@ -1136,7 +1120,8 @@ public class MaxarDtmReader implements AutoCloseable
         return null;
     }
 
-    private static double[] findTiepointArray(FileDirectory d) {
+    private static double[] findTiepointArray(FileDirectory d)
+    {
         for (FileDirectoryEntry e : safeEntries(d)) {
             double[] a = toDoubleArray(e.getValues());
             if (a != null && a.length >= 6 && (a.length % 6 == 0)) return a;
@@ -1144,6 +1129,8 @@ public class MaxarDtmReader implements AutoCloseable
         return null;
     }
 
+    // is there a GDALMetadata block and GeoTransform within it?
+    
     private static double[] extractGeoTransformFromGdalMetadata(FileDirectory d)
     {
         String xml = null;
@@ -1156,7 +1143,9 @@ public class MaxarDtmReader implements AutoCloseable
                 }
             }
         }
-        if (xml == null) return null;
+        if (xml == null) {
+            return null;
+        }
         int i0 = xml.indexOf("<GeoTransform>");
         int i1 = xml.indexOf("</GeoTransform>");
         if (i0 < 0 || i1 <= i0) return null;
@@ -1287,101 +1276,6 @@ public class MaxarDtmReader implements AutoCloseable
             return null;
         }
     }
-
-    
-    // use method reflection (slow) to find and call the pixel sample function
-    
-    // private Double sampleReflection(int col, int row)
-    // {
-    //     try {
-    //         // Try the safest direct methods first
-    //         if (mGetPixelSampleDouble != null) {
-    //             System.out.println("pixelSampleDouble");
-    //             try {
-    //                 Object ret = mGetPixelSampleDouble.invoke(rasters, col, row, 0);
-    //                 double v = ((Number) ret).doubleValue();
-    //                 if (Double.isNaN(v)) return null;
-    //                 if (noData != null && Double.compare(v, noData) == 0) return null;
-    //                 return v;
-    //             } catch (java.lang.reflect.InvocationTargetException ite) {
-    //                 // if it's a sample-index error, retry swapped order
-    //                 Throwable cause = ite.getCause();
-    //                 if (cause != null && cause.getClass().getName().endsWith("TiffException")
-    //                     && cause.getMessage() != null
-    //                     && cause.getMessage().toLowerCase().contains("sample out of bounds")) {
-    //                     Object ret = mGetPixelSampleDouble.invoke(rasters, 0, col, row);
-    //                     double v = ((Number) ret).doubleValue();
-    //                     if (Double.isNaN(v)) return null;
-    //                     if (noData != null && Double.compare(v, noData) == 0) return null;
-    //                     return v;
-    //                 } else {
-    //                     throw ite;
-    //                 }
-    //             }
-    //         }
-
-    //         if (mGetPixelSample != null) {
-    //             try {
-    //                 Object ret = mGetPixelSample.invoke(rasters, col, row, 0); // assume (x,y,sample)
-    //                 double v = ((Number) ret).doubleValue();
-    //                 if (Double.isNaN(v)) return null;
-    //                 if (noData != null && Double.compare(v, noData) == 0) return null;
-    //                 System.out.println("pixelSample");                                    
-    //                 return v;
-    //             } catch (java.lang.reflect.InvocationTargetException ite) {
-    //                 // retry as (sample,x,y)
-    //                 Throwable cause = ite.getCause();
-    //                 if (cause != null && cause.getClass().getName().endsWith("TiffException")
-    //                     && cause.getMessage() != null
-    //                     && cause.getMessage().toLowerCase().contains("sample out of bounds")) {
-    //                     Object ret = mGetPixelSample.invoke(rasters, 0, col, row);
-    //                     double v = ((Number) ret).doubleValue();
-    //                     if (Double.isNaN(v)) return null;
-    //                     if (noData != null && Double.compare(v, noData) == 0) return null;
-    //                     System.out.println("pixelSampleCatch");                                                            
-    //                     return v;
-    //                 } else {
-    //                     throw ite;
-    //                 }
-    //             }
-    //         }
-
-    //         if (mGetFirstPixelSample != null) {
-    //             System.out.println("getFirstPixelSample");
-    //             Object ret = mGetFirstPixelSample.invoke(rasters, col, row); // (x,y)
-    //             double v = ((Number) ret).doubleValue();
-    //             if (Double.isNaN(v)) return null;
-    //             if (noData != null && Double.compare(v, noData) == 0) return null;
-    //             return v;
-    //         }
-
-    //         if (mGetPixel != null) {
-    //             System.out.println("getPixel");
-    //             Object px = mGetPixel.invoke(rasters, col, row); // (x,y)
-    //             if (px == null) return null;
-    //             Number first = null;
-    //             if (px instanceof Number[]) {
-    //                 Number[] arr = (Number[]) px;
-    //                 if (arr.length > 0) first = arr[0];
-    //             } else if (px.getClass().isArray()) {
-    //                 Object f = java.lang.reflect.Array.getLength(px) > 0 ? java.lang.reflect.Array.get(px, 0) : null;
-    //                 if (f instanceof Number) first = (Number) f;
-    //             } else if (px instanceof Number) {
-    //                 first = (Number) px;
-    //             }
-    //             if (first == null) return null;
-    //             double v = first.doubleValue();
-    //             if (Double.isNaN(v)) return null;
-    //             if (noData != null && Double.compare(v, noData) == 0) return null;
-    //             return v;
-    //         }
-
-    //         throw new IllegalStateException("No compatible pixel-sample method on Rasters.");
-
-    //     } catch (Exception e) {
-    //         throw new RuntimeException("Raster sample read failed", e);
-    //     }
-    // }
     
     private double[] worldFromPixel(double col, double row) {
         return new double[] { a0 + a1*col + a2*row, b0 + b1*col + b2*row };
@@ -1417,47 +1311,17 @@ public class MaxarDtmReader implements AutoCloseable
         public String toString(){ return String.format("minX=%.6f, minY=%.6f, maxX=%.6f, maxY=%.6f",minX,minY,maxX,maxY); }
     }
 
-    /* ===== Optional filename seeding (kept) ===== */
-
-    public void seedFromFilenameIfNeeded(String filename, double pxX, double pxY) {
-        if (this.georeferenced) return;
-        DmsLatLon ll = parseDmsFromName(filename);
-        if (ll == null) return;
-        int utmZone = (int)Math.floor((ll.lon + 180.0)/6.0) + 1;
-        boolean north = ll.lat >= 0;
-        String epsg = String.format("EPSG:%d", (north?32600:32700)+utmZone);
-        enableCrs(epsg);
-        ProjCoordinate ctr = transform(wgsToData, ll.lon, ll.lat);
-        double ox = ctr.x - (width*0.5)*pxX;
-        double oy = ctr.y + (height*0.5)*pxY;
-        setAffine(ox, pxX, 0.0, oy, 0.0, -pxY);
-        this.georeferenced = true;
-        this.dataEpsg = epsg;
-    }
-
-    private static class DmsLatLon { final double lat, lon; DmsLatLon(double lat,double lon){this.lat=lat; this.lon=lon;} }
-    private static DmsLatLon parseDmsFromName(String name) {
-        Pattern p = Pattern.compile("(?i)(\\d{2})(\\d{2})(\\d{2})([WE])[^\\d]*(\\d{2})(\\d{2})(\\d{2})([NS])");
-        Matcher m = p.matcher(name);
-        if (!m.find()) return null;
-        int lonD=Integer.parseInt(m.group(1)), lonM=Integer.parseInt(m.group(2)), lonS=Integer.parseInt(m.group(3));
-        int latD=Integer.parseInt(m.group(5)), latM=Integer.parseInt(m.group(6)), latS=Integer.parseInt(m.group(7));
-        char lonH=m.group(4).toUpperCase().charAt(0), latH=m.group(8).toUpperCase().charAt(0);
-        double lon = lonD + lonM/60.0 + lonS/3600.0; if (lonH=='W') lon=-lon;
-        double lat = latD + latM/60.0 + latS/3600.0; if (latH=='S') lat=-lat;
-        return new DmsLatLon(lat,lon);
-    }
-
     private static ProjCoordinate transform(CoordinateTransform ct, double x, double y) {
         ProjCoordinate src = new ProjCoordinate(x,y), dst = new ProjCoordinate();
         ct.transform(src, dst); return dst;
     }
 
-    /** Returns something like "EPSG:32616" or null if unknown. */
+    // Returns something like "EPSG:32616" or null if unknown.
     // 326XX is WGS84 UTM in Northern hemisphere
     // 327XX is WGS84 UTM in Southern hemisphere
     
-    private String determineHorizontalCRS(FileDirectory d) {
+    private String determineHorizontalCRS(FileDirectory d)
+    {
         // Prefer GeoKeyDirectory → ProjectedCSType(3072) or GeographicType(2048)
         int[] gk = readGeoKeyDirectoryU16(d);
         if (looksLikeGeoKeyDirectory(gk)) {
@@ -1469,6 +1333,7 @@ public class MaxarDtmReader implements AutoCloseable
                 int value  = gk[idx + 3];
                 if ((keyId == 3072 /* ProjectedCSType */ || keyId == 2048 /* GeographicType */)
                     && tiffTag == 0 && count == 1) {
+                    // System.out.println("determineHorizontalCRS: found in geokeys");
                     return "EPSG:" + value;
                 }
             }
@@ -1481,7 +1346,11 @@ public class MaxarDtmReader implements AutoCloseable
             // quick scan for "EPSG:nnnnn"
             java.util.regex.Matcher m = java.util.regex.Pattern
                 .compile("EPSG\\s*:\\s*(\\d{3,6})").matcher(gdal);
-            if (m.find()) return "EPSG:" + m.group(1);
+
+            if (m.find()) {
+                // System.out.println("determineHorizontalCRS: found in gdal");
+                return "EPSG:" + m.group(1);
+            }
         }
         return null;
     }
@@ -1511,6 +1380,7 @@ public class MaxarDtmReader implements AutoCloseable
                     if (value == 5773) return "EPSG:5773"; // EGM96 geoid
                     if (value == 3855) return "EPSG:3855"; // EGM2008 geoid
                     if (value == 4979) return "EPSG:4979"; // WGS84 3D (ellipsoidal)
+                    // System.out.println("determineVerticalCRS: found in geokeys");
                     return "EPSG:" + value;               // some other vertical CRS
                 }
                 // VerticalDatumGeoKey (4098) / VerticalUnitsGeoKey (4099) can hint too,
@@ -1530,7 +1400,6 @@ public class MaxarDtmReader implements AutoCloseable
                     .matcher(gdal);
                 if (m.find()) {
                     String v = m.group(1).toUpperCase();
-                    //System.out.println("determineVerticalCRS: found "+v);
                     if (v.contains("EGM2008")) return "EPSG:3855";
                     if (v.contains("EGM96"))  return "EPSG:5773";
                     if (v.contains("NAVD88")) return "EPSG:5703";
@@ -1539,7 +1408,7 @@ public class MaxarDtmReader implements AutoCloseable
                         String realize = findMetadataItem(gdal, "R3DM_DATUM_REALIZATION");
                         if (realize == null) realize = findMetadataItem(gdal, "DATUM_REALIZATION");
                         if (realize != null && !realize.isEmpty() && realize.contains("G1674")) {
-                            System.out.println("determineVerticalCRS: maxar/vricon G1674 is WGS84");                            
+                            // System.out.println("determineVerticalCRS: maxar/vricon G1674 is WGS84");                            
                             return "EPSG:4979";                            
                         }
                     }
@@ -1550,6 +1419,7 @@ public class MaxarDtmReader implements AutoCloseable
             if (realize != null && !realize.isEmpty() && realize.contains("G1674")) {
                 // System.out.println("determineVerticalCRS: G1674 is WGS84");
                 // return "ELLIPSOID (WGS84 " + realize + ")";
+                // System.out.println("determineVerticalCRS: found in gdal");                
                 return "EPSG:4979";
             }
         }
@@ -1566,6 +1436,7 @@ public class MaxarDtmReader implements AutoCloseable
     private String inferVerticalType(FileDirectory d)
     {
         // 1) GeoKeyDirectory vertical code if present
+        // getGeoKeyDirectory not present in our libs
         int[] gk = readGeoKeyDirectoryU16(d);
         if (looksLikeGeoKeyDirectory(gk)) {
             int numKeys = gk[3], idx = 4;
@@ -1606,11 +1477,17 @@ public class MaxarDtmReader implements AutoCloseable
     /* ================= helpers used above ================= */
 
     // Read GeoKeyDirectory (UInt16 array) via typed getter or by scanning entries.
-    private static int[] readGeoKeyDirectoryU16(FileDirectory d) {
-        Object gk = getObjectViaGetter(d, "getGeoKeyDirectory");
-        int[] s = toUInt16Array(gk);
-        if (looksLikeGeoKeyDirectory(s)) return s;
+    // getGeoKeyDirectory() not present in our mil.nga.tiff library
+    
+    private static int[] readGeoKeyDirectoryU16(FileDirectory d)
+    {
+        int[] s;
+        
+        // Object gk = getObjectViaGetter(d, "getGeoKeyDirectory");
+
         // Fallback: scan entries for something that looks like the GeoKeyDirectory vector
+        // System.out.println("readGeoKeyDirectoryU16: falling back to finding");
+        
         for (FileDirectoryEntry e : safeEntries(d)) {
             s = toUInt16Array(e.getValues());
             if (looksLikeGeoKeyDirectory(s)) return s;
@@ -1628,7 +1505,8 @@ public class MaxarDtmReader implements AutoCloseable
     }
 
     // Pull the value of an <Item name="...">...</Item> in GDAL metadata (simple string search).
-    private static String findMetadataItem(String gdalXml, String name) {
+    private static String findMetadataItem(String gdalXml, String name)
+    {
         if (gdalXml == null) return null;
         java.util.regex.Matcher m = java.util.regex.Pattern
             .compile("<Item\\s+name=\""+java.util.regex.Pattern.quote(name)+"\"[^>]*>(.*?)</Item>",
@@ -1637,7 +1515,8 @@ public class MaxarDtmReader implements AutoCloseable
         return m.find() ? m.group(1).trim() : null;
     }
 
-    private static boolean looksLikeGeoKeyDirectory(int[] s) {
+    private static boolean looksLikeGeoKeyDirectory(int[] s)
+    {
         return s != null && s.length >= 4 && s[0]==1 && s[1]==1 && s[2]==0;
     }
 
