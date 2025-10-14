@@ -4,19 +4,24 @@
 // javac -cp "lib/*" MaxarDtmReader.java
 // java -cp ".:lib/*" MaxarDtmReader 
 
-// MaxarDtmReader.java – robust to mil.nga.tiff variants without relying on numeric tag IDs
+// MaxarDtmReader.java – robust DTM reader using mil.nga.tiff that will
+// try a variety of approaches for finding relevant metadata
 // because it also will find/use gdalinfo if present
-// maxar DTMs encode params in gdalinfo, OT DTMs in tie points, scales, etc.
-// it seems neither encode the vertical CRS though
+// maxar DTMs encode some params in gdalinfo, OT DTMs in tie points, scales, etc.
+// maxar does encode vertical dataum in gdal metadata
 // https://chatgpt.com/c/68ea6565-1f40-8330-9669-c5f675a75528
+// 
 // EPSG: 4269 is NAD83 
 // EPSG: 4326 is WGS84
 // NAVD88 [EPSG: 5703] is orthometric height H or AMSL
 // WGS84 = EGM96 + offset
+// 
 // h = ellipsoidal height
 // H = orthometric height
 // N = geoid height or offset
-// h = H + N
+// h = H + N 
+// wgs84alt = egmalt + offset
+// 
 // EPSG:3855 is EGM2008 or orthometric or AMSL height, COP30, 3DEP (NAVD88), EUDTM, 
 // EPSG:5773 is EGM96 or orthometric or AMSL height, SRTM, DTED
 // EPSG:4979 is WGS84 ellipsoidal height, 
@@ -64,7 +69,6 @@ import com.openathena.core.MathUtils;
 
 public class MaxarDtmReader implements AutoCloseable
 {
-    
     // GeoKey IDs 
     private static final int KEY_GeographicTypeGeoKey  = 2048;
     private static final int KEY_ProjectedCSTypeGeoKey = 3072;
@@ -166,7 +170,10 @@ public class MaxarDtmReader implements AutoCloseable
     private void readGeofile(String filepath) throws Exception
     {
         // System.out.println("readGeofile: "+filepath);
-        
+        long t0, t1;
+
+
+
         tiff = TiffReader.readTiff(geofile);
 
         // Gather all IFDs (root + subIFDs if exposed)
@@ -208,7 +215,7 @@ public class MaxarDtmReader implements AutoCloseable
             System.err.println("[MaxarDtmReader] No georeferencing found; operating in pixel space.");
         }
 
-        // this.noData = tryReadNoDataRobust(dir);
+        // this takes longer for cop30 and not sure why
         this.rasters = dir.readRasters();
 
         // Horizontal & vertical CRS/datum detection
@@ -236,7 +243,11 @@ public class MaxarDtmReader implements AutoCloseable
         }
 
         // see what file said was vertical datum and potentially override
-        // the gType vertical datum
+        // the gType vertical datum; if needed, set offset provider
+        
+        // takes a long time on 3dep, cop30, eudtm
+        // is this due to size of EGM2008?  Yes
+
         testVerticalDatum();
 
     } // readGeofile
@@ -328,7 +339,8 @@ public class MaxarDtmReader implements AutoCloseable
             break;
         case "EPSG:4979":
             // WGS84; no need for offset provider
-            offsetProvider = null;
+            // but we load 2008 so we can also provide egm2008 altitude
+            offsetProvider = new EGM2008OffsetAdapter();
             verticalDatum = verticalCRS;
             break;
         default:
@@ -362,18 +374,6 @@ public class MaxarDtmReader implements AutoCloseable
     public double getMinLon() { return w; }
     public double getN() { return n; }
     public double getMaxLat() { return n; }
-    
-    // public Bounds getBoundsDataCRS() {
-    //     double[] p00 = worldFromPixel(0, 0);
-    //     double[] p10 = worldFromPixel(width, 0);
-    //     double[] p01 = worldFromPixel(0, height);
-    //     double[] p11 = worldFromPixel(width, height);
-    //     double minX = Math.min(Math.min(p00[0], p10[0]), Math.min(p01[0], p11[0]));
-    //     double maxX = Math.max(Math.max(p00[0], p10[0]), Math.max(p01[0], p11[0]));
-    //     double minY = Math.min(Math.min(p00[1], p10[1]), Math.min(p01[1], p11[1]));
-    //     double maxY = Math.max(Math.max(p00[1], p10[1]), Math.max(p01[1], p11[1]));
-    //     return new Bounds(minX, minY, maxX, maxY);
-    // }
 
     // Bounds in the raster's native CRS using a center-aware corner convention
     
@@ -539,7 +539,10 @@ public class MaxarDtmReader implements AutoCloseable
     } // getElevationProjectedIDW
 
     // for a lat,lon, use our EGM96 offset provider to return the lat,lon
-
+    // we should allocate an offsetprovider anyway ?
+    // Maxar DEMs don't need offset provider but we load EGM2008 for conversion
+    // purposes
+    
     public double getEGMOffsetForLatLon(double lat, double lon)
     {
         return offsetProvider.getEGMOffsetAtLatLon(lat,lon);
@@ -548,6 +551,9 @@ public class MaxarDtmReader implements AutoCloseable
     // we could be smarter here because many of our altitudes are
     // in EGM but its too easy to just get the altitude in WGS84 and subtract
     // the offset; less code to maintain but potentially calls getEGMOffset twice
+
+    // maxar DEMs don't need an offset provider since their vertical datum is wgs84
+    // but we load EGM2008 for maxar so we can convert altitudes
     
     public double getEGMAltFromLatLon(double lat, double lon) throws RequestedValueOOBException, CorruptTerrainException
     {
@@ -733,6 +739,8 @@ public class MaxarDtmReader implements AutoCloseable
             // offset provider better be set!!
             double offset = offsetProvider.getEGMOffsetAtLatLon(latDeg,lonDeg);
             alt = alt + offset;
+        case "EPSG:4979":
+            // do nothing as vertical datum is WGS84 already
         }
 
         return alt;
@@ -793,11 +801,6 @@ public class MaxarDtmReader implements AutoCloseable
 
     private void requireGeoref(String op) {
         if (!georeferenced) throw new IllegalStateException(op + " requires georeferencing.");
-    }
-
-    private static Number invokeNumberGetterFallback(Object target, String primary, String secondary) throws Exception {
-        try { return (Number) target.getClass().getMethod(primary).invoke(target); }
-        catch (NoSuchMethodException e) { return (Number) target.getClass().getMethod(secondary).invoke(target); }
     }
 
     private static List<FileDirectory> collectAllDirectories(TIFFImage tiffImage)
@@ -989,15 +992,7 @@ public class MaxarDtmReader implements AutoCloseable
         }
 
         // 3) ModelTransformation (4×4) → shift center→corner
-        // double[] mt = tryGetModelTransformation(d);              // your existing helper
-        // System.out.println("tryGetModelTransformation returned "+mt);
-        // if (mt != null && mt.length == 16) {
-        //     double a1 = mt[0], a2 = mt[1], a0 = mt[3];
-        //     double b1 = mt[4], b2 = mt[5], b0 = mt[7];
-        //     double adjA0 = a0 - 0.5 * a1 - 0.5 * a2;
-        //     double adjB0 = b0 - 0.5 * b1 - 0.5 * b2;
-        //     return new AffineParams(adjA0, a1, a2, adjB0, b1, b2);
-        // }
+        // we don't have getModelTransform method in our mil.nga.tiff
 
         // 4a) Scan for another 16-dbl matrix and normalize the same way
         double[] mt2 = findDouble16Matrix(d);                    // your existing helper
@@ -1033,32 +1028,14 @@ public class MaxarDtmReader implements AutoCloseable
     }
 
     // for the chosen directory, add mapping of directory entries to tag IDs
+    // into directoryIndexTag map
+    
     private void indexDirectoryTags(FileDirectory d)
     {
         // Map<Integer, FileDirectoryEntry> map = new HashMap<>();
         for (FileDirectoryEntry e : d.getEntries()) {
             directoryIndexTags.put(e.getFieldTag().getId(), e);
         }
-    }
-
-    private static Double tryReadNoDataRobust(FileDirectory d) {
-        for (FileDirectoryEntry e : safeEntries(d)) {
-            Object v = e.getValues();
-            if (v instanceof Number) {
-                double val = ((Number) v).doubleValue();
-                if (val == -32767.0) return -32767.0;
-            } else if (v instanceof Number[]) {
-                Number[] nn = (Number[]) v;
-                if (nn.length == 1) {
-                    try { return nn[0].doubleValue(); } catch (Exception ignore) {}
-                }
-            } else if (v instanceof byte[] || v instanceof char[] || v instanceof String || v instanceof List<?>) {
-                String s = toAscii(v).trim();
-                if (s.equals("-32767") || s.equals("-32767.000000")) return -32767.0;
-                try { return Double.valueOf(s); } catch (Exception ignore) {}
-            }
-        }
-        return null;
     }
 
     private static String detectEpsgRobust(FileDirectory d)
@@ -1540,6 +1517,7 @@ public class MaxarDtmReader implements AutoCloseable
 
         System.setProperty("slf4j.internal.verbosity", "ERROR");
 
+        // initialize an OpenAthenaCore to get EGM providers initialized
         OpenAthenaCore.CacheDir = Paths.get("/");
         OpenAthenaCore core = new OpenAthenaCore();
         
