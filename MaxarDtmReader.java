@@ -217,17 +217,17 @@ public class MaxarDtmReader implements AutoCloseable
         this.verticalCRS = determineVerticalCRS(dir);
 
         // Raster access methods
-        Method g1 = null, g2 = null, g3 = null, g4 = null;
-        for (Method m : Rasters.class.getMethods()) {
-            if (m.getName().equals("getPixelSampleDouble") && m.getParameterCount() == 3) g1 = m;
-            if (m.getName().equals("getFirstPixelSample")  && m.getParameterCount() == 2) g2 = m;
-            if (m.getName().equals("getPixelSample")       && m.getParameterCount() == 3) g3 = m; // returns Number
-            if (m.getName().equals("getPixel")             && m.getParameterCount() == 2) g4 = m; // returns pixel samples            
-        }
-        this.mGetPixelSampleDouble = g1;
-        this.mGetFirstPixelSample  = g2;
-        this.mGetPixelSample       = g3;
-        this.mGetPixel             = g4;
+        // Method g1 = null, g2 = null, g3 = null, g4 = null;
+        // for (Method m : Rasters.class.getMethods()) {
+        //     if (m.getName().equals("getPixelSampleDouble") && m.getParameterCount() == 3) g1 = m;
+        //     if (m.getName().equals("getFirstPixelSample")  && m.getParameterCount() == 2) g2 = m;
+        //     if (m.getName().equals("getPixelSample")       && m.getParameterCount() == 3) g3 = m; // returns Number
+        //     if (m.getName().equals("getPixel")             && m.getParameterCount() == 2) g4 = m; // returns pixel samples            
+        // }
+        // this.mGetPixelSampleDouble = g1;
+        // this.mGetFirstPixelSample  = g2;
+        // this.mGetPixelSample       = g3;
+        // this.mGetPixel             = g4;
 
         if (georeferenced) {
             // Prefer the horizontal CRS we parsed earlier
@@ -845,7 +845,8 @@ public class MaxarDtmReader implements AutoCloseable
     }
 
 
-    private static boolean hasAnyGeorefSignature(FileDirectory d) {
+    private static boolean hasAnyGeorefSignature(FileDirectory d)
+    {
         if (tryGetModelPixelScale(d) != null && tryGetModelTiepoint(d) != null) return true;
         if (tryGetModelTransformation(d) != null) return true;
         if (findDouble16Matrix(d) != null) return true;
@@ -1238,91 +1239,112 @@ public class MaxarDtmReader implements AutoCloseable
     private static boolean nearZero(double v) { return Math.abs(v) < 1e-10; }
     private static boolean nearOne (double v) { return Math.abs(v-1.0) < 1e-10; }
 
-    private Double sample(int col, int row) {
+    private Double sample(int col, int row)
+    {
+        if (col < 0 || row < 0 || col >= width || row >= height) return null;
         try {
-            // Try the safest direct methods first
-            if (mGetPixelSampleDouble != null) {
-                try {
-                    Object ret = mGetPixelSampleDouble.invoke(rasters, col, row, 0);
-                    double v = ((Number) ret).doubleValue();
-                    if (Double.isNaN(v)) return null;
-                    if (noData != null && Double.compare(v, noData) == 0) return null;
-                    return v;
-                } catch (java.lang.reflect.InvocationTargetException ite) {
-                    // if it's a sample-index error, retry swapped order
-                    Throwable cause = ite.getCause();
-                    if (cause != null && cause.getClass().getName().endsWith("TiffException")
-                        && cause.getMessage() != null
-                        && cause.getMessage().toLowerCase().contains("sample out of bounds")) {
-                        Object ret = mGetPixelSampleDouble.invoke(rasters, 0, col, row);
-                        double v = ((Number) ret).doubleValue();
-                        if (Double.isNaN(v)) return null;
-                        if (noData != null && Double.compare(v, noData) == 0) return null;
-                        return v;
-                    } else {
-                        throw ite;
-                    }
-                }
-            }
-
-            if (mGetPixelSample != null) {
-                try {
-                    Object ret = mGetPixelSample.invoke(rasters, col, row, 0); // assume (x,y,sample)
-                    double v = ((Number) ret).doubleValue();
-                    if (Double.isNaN(v)) return null;
-                    if (noData != null && Double.compare(v, noData) == 0) return null;
-                    return v;
-                } catch (java.lang.reflect.InvocationTargetException ite) {
-                    // retry as (sample,x,y)
-                    Throwable cause = ite.getCause();
-                    if (cause != null && cause.getClass().getName().endsWith("TiffException")
-                        && cause.getMessage() != null
-                        && cause.getMessage().toLowerCase().contains("sample out of bounds")) {
-                        Object ret = mGetPixelSample.invoke(rasters, 0, col, row);
-                        double v = ((Number) ret).doubleValue();
-                        if (Double.isNaN(v)) return null;
-                        if (noData != null && Double.compare(v, noData) == 0) return null;
-                        return v;
-                    } else {
-                        throw ite;
-                    }
-                }
-            }
-
-            if (mGetFirstPixelSample != null) {
-                Object ret = mGetFirstPixelSample.invoke(rasters, col, row); // (x,y)
-                double v = ((Number) ret).doubleValue();
-                if (Double.isNaN(v)) return null;
-                if (noData != null && Double.compare(v, noData) == 0) return null;
-                return v;
-            }
-
-            if (mGetPixel != null) {
-                Object px = mGetPixel.invoke(rasters, col, row); // (x,y)
-                if (px == null) return null;
-                Number first = null;
-                if (px instanceof Number[]) {
-                    Number[] arr = (Number[]) px;
-                    if (arr.length > 0) first = arr[0];
-                } else if (px.getClass().isArray()) {
-                    Object f = java.lang.reflect.Array.getLength(px) > 0 ? java.lang.reflect.Array.get(px, 0) : null;
-                    if (f instanceof Number) first = (Number) f;
-                } else if (px instanceof Number) {
-                    first = (Number) px;
-                }
-                if (first == null) return null;
-                double v = first.doubleValue();
-                if (Double.isNaN(v)) return null;
-                if (noData != null && Double.compare(v, noData) == 0) return null;
-                return v;
-            }
-
-            throw new IllegalStateException("No compatible pixel-sample method on Rasters.");
-
+            Number n = rasters.getPixelSample(0,col,row);
+            if (n == null) return null;
+            return n.doubleValue();
         } catch (Exception e) {
-            throw new RuntimeException("Raster sample read failed", e);
+            return null;
         }
     }
+
+    
+    // use method reflection (slow) to find and call the pixel sample function
+    
+    // private Double sampleReflection(int col, int row)
+    // {
+    //     try {
+    //         // Try the safest direct methods first
+    //         if (mGetPixelSampleDouble != null) {
+    //             System.out.println("pixelSampleDouble");
+    //             try {
+    //                 Object ret = mGetPixelSampleDouble.invoke(rasters, col, row, 0);
+    //                 double v = ((Number) ret).doubleValue();
+    //                 if (Double.isNaN(v)) return null;
+    //                 if (noData != null && Double.compare(v, noData) == 0) return null;
+    //                 return v;
+    //             } catch (java.lang.reflect.InvocationTargetException ite) {
+    //                 // if it's a sample-index error, retry swapped order
+    //                 Throwable cause = ite.getCause();
+    //                 if (cause != null && cause.getClass().getName().endsWith("TiffException")
+    //                     && cause.getMessage() != null
+    //                     && cause.getMessage().toLowerCase().contains("sample out of bounds")) {
+    //                     Object ret = mGetPixelSampleDouble.invoke(rasters, 0, col, row);
+    //                     double v = ((Number) ret).doubleValue();
+    //                     if (Double.isNaN(v)) return null;
+    //                     if (noData != null && Double.compare(v, noData) == 0) return null;
+    //                     return v;
+    //                 } else {
+    //                     throw ite;
+    //                 }
+    //             }
+    //         }
+
+    //         if (mGetPixelSample != null) {
+    //             try {
+    //                 Object ret = mGetPixelSample.invoke(rasters, col, row, 0); // assume (x,y,sample)
+    //                 double v = ((Number) ret).doubleValue();
+    //                 if (Double.isNaN(v)) return null;
+    //                 if (noData != null && Double.compare(v, noData) == 0) return null;
+    //                 System.out.println("pixelSample");                                    
+    //                 return v;
+    //             } catch (java.lang.reflect.InvocationTargetException ite) {
+    //                 // retry as (sample,x,y)
+    //                 Throwable cause = ite.getCause();
+    //                 if (cause != null && cause.getClass().getName().endsWith("TiffException")
+    //                     && cause.getMessage() != null
+    //                     && cause.getMessage().toLowerCase().contains("sample out of bounds")) {
+    //                     Object ret = mGetPixelSample.invoke(rasters, 0, col, row);
+    //                     double v = ((Number) ret).doubleValue();
+    //                     if (Double.isNaN(v)) return null;
+    //                     if (noData != null && Double.compare(v, noData) == 0) return null;
+    //                     System.out.println("pixelSampleCatch");                                                            
+    //                     return v;
+    //                 } else {
+    //                     throw ite;
+    //                 }
+    //             }
+    //         }
+
+    //         if (mGetFirstPixelSample != null) {
+    //             System.out.println("getFirstPixelSample");
+    //             Object ret = mGetFirstPixelSample.invoke(rasters, col, row); // (x,y)
+    //             double v = ((Number) ret).doubleValue();
+    //             if (Double.isNaN(v)) return null;
+    //             if (noData != null && Double.compare(v, noData) == 0) return null;
+    //             return v;
+    //         }
+
+    //         if (mGetPixel != null) {
+    //             System.out.println("getPixel");
+    //             Object px = mGetPixel.invoke(rasters, col, row); // (x,y)
+    //             if (px == null) return null;
+    //             Number first = null;
+    //             if (px instanceof Number[]) {
+    //                 Number[] arr = (Number[]) px;
+    //                 if (arr.length > 0) first = arr[0];
+    //             } else if (px.getClass().isArray()) {
+    //                 Object f = java.lang.reflect.Array.getLength(px) > 0 ? java.lang.reflect.Array.get(px, 0) : null;
+    //                 if (f instanceof Number) first = (Number) f;
+    //             } else if (px instanceof Number) {
+    //                 first = (Number) px;
+    //             }
+    //             if (first == null) return null;
+    //             double v = first.doubleValue();
+    //             if (Double.isNaN(v)) return null;
+    //             if (noData != null && Double.compare(v, noData) == 0) return null;
+    //             return v;
+    //         }
+
+    //         throw new IllegalStateException("No compatible pixel-sample method on Rasters.");
+
+    //     } catch (Exception e) {
+    //         throw new RuntimeException("Raster sample read failed", e);
+    //     }
+    // }
     
     private double[] worldFromPixel(double col, double row) {
         return new double[] { a0 + a1*col + a2*row, b0 + b1*col + b2*row };
@@ -1597,6 +1619,7 @@ public class MaxarDtmReader implements AutoCloseable
     public static void main(String[] args) throws Exception
     {
         boolean verbose = false;
+        long t0, t1;
         // instantiate a core to initialize EGM96OffsetProvider
 
         System.setProperty("slf4j.internal.verbosity", "ERROR");
@@ -1618,9 +1641,16 @@ public class MaxarDtmReader implements AutoCloseable
                 System.exit(2);
             }
         }
-
+        
         File f = new File(args[i++]);
+
+        t0 = System.nanoTime();
+        
         try (MaxarDtmReader dtm = new MaxarDtmReader(f)) {
+
+            t1 = System.nanoTime();
+
+            System.out.println("MaxarDtmReader took " + ((t1 - t0)/1_000_000) + " ms");
 
             if (verbose) {
                 System.out.println("Size: " + dtm.getWidth() + " x " + dtm.getHeight());
@@ -1650,8 +1680,18 @@ public class MaxarDtmReader implements AutoCloseable
                     var ez = dtm.getAltFromLatLon(lat,lon);
                     System.out.printf("Elev @ (%.6f, %.6f): %s%n", lat, lon,
                                       String.format("%.3f m",ez));
+
+
+                    t0 = System.nanoTime();                    
+                    for (i=0; i<100; i++) {
+                        var alt = dtm.getAltFromLatLon(lat,lon);
+                    }
+                    t1 = System.nanoTime();                                        
+                    System.out.println("MaxarDtmReader took " + ((t1 - t0)/1_000_000) + " ms for 100 lookups");
+                    System.out.println("MaxarDtmReader took " + ((t1 - t0)/1_000_000 / 100 ) + " ms per lookup");
+                    
                 } catch (Exception ex) {
-                    System.out.println("Lon/lat query not available (image unreferenced).");
+                    System.out.println("Lon/lat query not available (image unreferenced) "+ex);
                 }
             }
         }

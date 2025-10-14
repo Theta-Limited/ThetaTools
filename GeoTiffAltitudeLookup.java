@@ -97,12 +97,18 @@ public class GeoTiffAltitudeLookup
         System.out.println(latitude+","+longitude+" is in USA? "+isInUSA(latitude,longitude));
         System.out.println(latitude+","+longitude+" is in Europe? "+isInEurope(latitude,longitude));
 
+        long t0, t1;
         if (inputFilePath.endsWith(".dt2")) {
+            t0 = System.nanoTime();                
             readDted(inputFilePath,latitude,longitude);
+            t1 = System.nanoTime();                            
         }
         else {
+            t0 = System.nanoTime();                            
             readGeoTiff(inputFilePath,latitude,longitude);
+            t1 = System.nanoTime();                                        
         }
+        System.out.println("GeoTiff took " + ((t1 - t0)/1_000_000) + " ms");        
     }
 
     private static void readDted(String inputFilePath, double latitude, double longitude)

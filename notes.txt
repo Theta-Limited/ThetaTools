@@ -328,3 +328,16 @@ java -cp ".:lib/*" MaxarDtmReader 0843139w_334956n_20251008T145803Z_dtm.tif  33.
 Elev @ (33.837327, -84.522635): 237.709 m
 java -cp ".:lib/*" MaxarDtmReader parkinglot.cop30  33.837326602 -84.522635213
 Elev @ (33.837327, -84.522635): 239.777 m
+smyrna.krupczak.org%java -cp ".:lib/*" MaxarDtmReader parkinglot.srtm 33.837326602 -84.522635213
+Elev @ (33.837327, -84.522635): 242.085 m
+
+---------------------------------------------------------
+
+Loading times
+
+parkinglot.3dep MaxarDtmReader took 418 ms
+parkinglot.cop30 MaxarDtmReader took 570 ms
+parkinglot.max MaxarDtmReader took 217 ms
+parkinglot.srtm MaxarDtmReader took 156 ms
+
+

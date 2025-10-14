@@ -83,12 +83,17 @@ public class GeoTiffInfoAlt
 
         String inputFilePath = args[0];
 
+        long t0, t1;
+        
+        t0 = System.nanoTime();                            
         if (inputFilePath.endsWith(".dt2")) {
             readDted(inputFilePath);
         }
         else {
             readGeoTiff(inputFilePath);
         }
+        t1 = System.nanoTime();
+        System.out.println("GeoTiff took " + ((t1 - t0)/1_000_000) + " ms");                
     }
 
     private static void readDted(String inputFilePath)
