@@ -164,39 +164,25 @@ public class MaxarDtmReader implements AutoCloseable
         // Gather all IFDs (root + subIFDs if exposed)
         List<FileDirectory> all = collectAllDirectories(tiff);
 
-        // Debug summary (content-signature based)
-        // System.err.println("[MaxarDtmReader] IFD summary:");
-        for (FileDirectory d : all) {
-            try {
-                int w = toInt(d.getImageWidth());
-                int h = toInt(invokeNumberGetterFallback(d, "getImageHeight", "getImageLength"));
-                boolean has = hasAnyGeorefSignature(d);
-                // System.err.printf("  - %dx%d  georef: %s%n", w, h, has ? "present" : "none");
-            } catch (Exception ex) {
-                // System.err.println("  - <error summarizing IFD>");
-            }
-        }
-
         // Pick best: prefer georef; else largest area
         FileDirectory picked = null;
         long bestArea = -1;
         boolean bestHas = false;
         for (FileDirectory d : all) {
             int w = toInt(d.getImageWidth());
-            int h = toInt(invokeNumberGetterFallback(d, "getImageHeight", "getImageLength"));
+            int h = toInt(d.getImageHeight());            
             long area = (long) w * (long) h;
             boolean has = hasAnyGeorefSignature(d);
             if (picked == null || (has && !bestHas) || (has == bestHas && area > bestArea)) {
                 picked = d; bestArea = area; bestHas = has;
             }
         }
+
         if (picked == null) picked = tiff.getFileDirectory();
         this.dir = picked;
-
         this.centerAnchored = isCenterAnchored(dir);
-
         this.width  = toInt(dir.getImageWidth());
-        this.height = toInt(invokeNumberGetterFallback(dir, "getImageHeight", "getImageLength"));
+        this.height = toInt(dir.getImageHeight());
 
         // Build affine: getters → signatures → GDAL_METADATA
         AffineParams ap = tryBuildAffineRobust(dir);
@@ -754,7 +740,41 @@ public class MaxarDtmReader implements AutoCloseable
     
     @Override public void close() {}
 
-    // internal methods for parsing/manipulating GeoTiff 
+    // internal methods for parsing/manipulating GeoTiff
+    private static final int TAG_ModelPixelScale     = 33550;
+    private static final int TAG_ModelTiepoint       = 33922;
+    private static final int TAG_ModelTransformation = 34264;
+    private static final int TAG_GDAL_METADATA       = 42112;
+    private static final int TAG_GDAL_NODATA         = 42113;
+
+    private static double[] readDoubleArrayTag(Map<Integer,FileDirectoryEntry> t, int tagId)
+    {
+        FileDirectoryEntry e = t.get(tagId);
+        if (e == null) return null;
+        Object v = e.getValues();
+        if (v == null) return null;
+        //System.out.println("readDoubleArrayTag: read object");
+        //System.out.println("readDoubleArrayTag: object is of type "+v.getClass().getName());
+
+        List<?> L = (List<?>) v;
+        double[] out = new double[L.size()];
+        for (int i = 0; i < L.size(); i++) {
+            Object o = L.get(i);
+            if (o == null) { out[i] = Double.NaN; continue; }
+            if (o instanceof Number) {
+                out[i] = ((Number) o).doubleValue();
+            } else {
+                // fallback: parse numeric strings
+                String s = o.toString().trim();
+                try {
+                    out[i] = Double.parseDouble(s);
+                } catch (NumberFormatException nfe) {
+                    out[i] = Double.NaN; // or throw, if you prefer strict behavior
+                }
+            }
+        }
+        return out;
+    }
 
     private void setAffine(double A0,double A1,double A2,double B0,double B1,double B2)
     {
@@ -932,8 +952,11 @@ public class MaxarDtmReader implements AutoCloseable
      *   3) ModelTransformation (4×4)             (center→corner shift)
      *   4) Scans for 16-dbl matrix or scale/tie arrays with same normalization
      */
+    
     private AffineParams tryBuildAffineRobust(FileDirectory d)
     {
+        var tags = indexTags(d);
+        
         // 1) Preferred: GDAL <GeoTransform> (exactly matches gdalinfo)
         double[] gt = extractGeoTransformFromGdalMetadata(d);    // your existing helper
         if (gt != null && gt.length == 6) {
@@ -941,8 +964,12 @@ public class MaxarDtmReader implements AutoCloseable
         }
 
         // 2) Scale + Tiepoint (normalize to corner)
-        double[] scale = tryGetModelPixelScale(d);               // your existing helper
-        double[] tie   = tryGetModelTiepoint(d);                 // your existing helper
+        //double[] scale = tryGetModelPixelScale(d);               // your existing helper
+        //double[] tie   = tryGetModelTiepoint(d);                 // your existing helper
+
+        double[] scale = readDoubleArrayTag(tags, TAG_ModelPixelScale);
+        double[] tie   = readDoubleArrayTag(tags, TAG_ModelTiepoint);
+
         if (scale != null && scale.length >= 2 && tie != null && tie.length >= 6) {
             double sx = scale[0], sy = scale[1];
             double i = tie[0], j = tie[1], x = tie[3], y = tie[4];
@@ -1015,6 +1042,15 @@ public class MaxarDtmReader implements AutoCloseable
             // ignore
         }
         return null;
+    }
+
+    private static Map<Integer, FileDirectoryEntry> indexTags(FileDirectory d)
+    {
+        Map<Integer, FileDirectoryEntry> map = new HashMap<>();
+        for (FileDirectoryEntry e : d.getEntries()) {
+            map.put(e.getFieldTag().getId(), e);
+        }
+        return map;
     }
 
     private static Double tryReadNoDataRobust(FileDirectory d) {
@@ -1108,7 +1144,8 @@ public class MaxarDtmReader implements AutoCloseable
         return null;
     }
 
-    private static double[] extractGeoTransformFromGdalMetadata(FileDirectory d) {
+    private static double[] extractGeoTransformFromGdalMetadata(FileDirectory d)
+    {
         String xml = null;
         for (FileDirectoryEntry e : safeEntries(d)) {
             Object v = e.getValues();
@@ -1681,14 +1718,13 @@ public class MaxarDtmReader implements AutoCloseable
                     System.out.printf("Elev @ (%.6f, %.6f): %s%n", lat, lon,
                                       String.format("%.3f m",ez));
 
-
-                    t0 = System.nanoTime();                    
-                    for (i=0; i<100; i++) {
-                        var alt = dtm.getAltFromLatLon(lat,lon);
-                    }
-                    t1 = System.nanoTime();                                        
-                    System.out.println("MaxarDtmReader took " + ((t1 - t0)/1_000_000) + " ms for 100 lookups");
-                    System.out.println("MaxarDtmReader took " + ((t1 - t0)/1_000_000 / 100 ) + " ms per lookup");
+                    // t0 = System.nanoTime();                    
+                    // for (i=0; i<100; i++) {
+                    //     var alt = dtm.getAltFromLatLon(lat,lon);
+                    // }
+                    // t1 = System.nanoTime();                                        
+                    // System.out.println("MaxarDtmReader took " + ((t1 - t0)/1_000_000) + " ms for 100 lookups");
+                    // System.out.println("MaxarDtmReader took " + ((t1 - t0)/1_000_000 / 100 ) + " ms per lookup");
                     
                 } catch (Exception ex) {
                     System.out.println("Lon/lat query not available (image unreferenced) "+ex);
