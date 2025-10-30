@@ -43,9 +43,10 @@ public class DemDownloader
         apiKeyStr = "NeedApiKey";
 	// read API key from environment variable
 	apiKeyStr = System.getenv("OPENTOPOGRAPHY_API_KEY");
-	if (apiKeyStr.equals("")) {
+	if ((apiKeyStr == null) || apiKeyStr.equals("")) {
 	    apiKeyStr = "GiveMeApiKey";
         }
+        System.out.println("DemDownloader: api key is "+apiKeyStr);
     }
 
     // Method to download DEM with blocking
