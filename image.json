@@ -1,5 +1,6 @@
 {
     "drone:GimbalPitchDegree": "41.40",
+    "dataset":"srtm",
     "yprop": "0.25",
     "GPS Latitude": "33.837470333333336",
     "GPS Longitude": "-84.52259847222223",
