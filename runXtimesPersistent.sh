@@ -28,29 +28,34 @@ echo $output
 
 CFG_FILE=$(mktemp)
 
+echo "Config file is $CFG_FILE"
+
 cat > "$CFG_FILE" <<EOF
 silent
 show-error
 
-# HTTP method
+# HTTP method: POST
 request = "POST"
 
 # Headers
 header = "Content-Type: application/json"
+# comment/remove this if no auth header:
 header = "Authorization: Bearer $API_KEY"
 
-# Body (same body every time)
-data = "{\"foo\":\"bar\"}"
+# Body: read from the JSON_FILE each time
+data-binary = "@$JSON_FILE"
 EOF
 
-# Add the URL once per request
+# Add URL once per request
 for ((i=1; i<=NUM_REQUESTS; i++)); do
     echo "url = \"$URL\"" >> "$CFG_FILE"
 done
 
 START_TIME=$(date +%s)
 
+# For debugging, temporarily add -v to see request/response
 curl --config "$CFG_FILE" > /dev/null
+# rl --config "$CFG_FILE"
 
 END_TIME=$(date +%s)
 DURATION=$((END_TIME - START_TIME))
