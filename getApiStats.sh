@@ -26,6 +26,6 @@ output=$(eval $CURL_CMD)
 
 echo "$output" | jq 'to_entries | sort_by(.key) | from_entries'
 
-total=$(jq -r '.numRESTPosts' <<< "$output" )
+# total=$(jq -r '.numRESTPosts' <<< "$output" )
 echo "Total posts is $total"
 
