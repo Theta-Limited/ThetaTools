@@ -73,7 +73,7 @@ def main():
         try:
             resp = session.post(url, data=body, headers=headers)
             # You can comment this out if you don’t want per-request noise
-            print(f"{i}/{num_requests}: ",resp.json())
+            # print(f"{i}/{num_requests}: ",resp.json())
         except requests.exceptions.RequestException as e:
             print(f"{i}/{num_requests}: request failed: {e}")
             # Optional: try to recreate the session once if the connection died
