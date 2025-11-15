@@ -15,7 +15,13 @@ PATH = "/api/v1/openathena/locationsimple?apikey=" + API_KEY
 STATSPATH = "/api/v1/openathena/admin/stats?apikey=" + API_KEY
 
 # JSON body file: either from env var JSON_FILE or hardcoded fallback
-JSON_FILE = "image.json"
+IMAGE_FILES = [
+    "image0.json",
+    "image1.json",
+    "image2.json",
+    "image3.json",
+    "image4.json",                
+]
 
 def load_body_from_file(path: str) -> str:
     with open(path, "r", encoding="utf-8") as f:
@@ -32,11 +38,7 @@ def main():
         print("NUM_REQUESTS must be an integer")
         sys.exit(1)
 
-    if not os.path.isfile(JSON_FILE):
-        print(f"ERROR: JSON_FILE '{JSON_FILE}' does not exist")
-        sys.exit(1)
-
-    body = load_body_from_file(JSON_FILE)
+    BODIES = [load_body_from_file(p) for p in IMAGE_FILES]
     url = BASE_URL + PATH
     statsurl = BASE_URL + STATSPATH
 
@@ -50,7 +52,7 @@ def main():
         headers["Authorization"] = f"Bearer {API_KEY}"
 
     print(f"Sending {num_requests} POST requests to {url}")
-    print(f"Using body from: {JSON_FILE}")
+
     if API_KEY:
         print("Using API_KEY from environment.")
     else:
@@ -63,18 +65,15 @@ def main():
     start_counter = stats["numRESTPosts"]
     print("Begining number of posts: ",start_counter)
     print("Heap: Sz: ",stats["coreHeapSize"]," Max: ",stats["coreHeapMaxSize"]," Free: ",stats["coreHeapFreeMemory"])    
-    
-    resp = session.post(url, data=body, headers=headers)
-    str = json.dumps(resp.json(),indent=2,sort_keys=True)
-    print("Cache warmup post returned ",str)
             
     total_start = time.perf_counter();
 
     for i in range(1, num_requests + 1):
+        body = BODIES[(i-1) % len(BODIES)]
         try:
             resp = session.post(url, data=body, headers=headers)
             # You can comment this out if you don’t want per-request noise
-            # print(f"{i}/{num_requests}: status={resp.status_code}")
+            print(f"{i}/{num_requests}: ",resp.json())
         except requests.exceptions.RequestException as e:
             print(f"{i}/{num_requests}: request failed: {e}")
             # Optional: try to recreate the session once if the connection died

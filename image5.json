@@ -1,0 +1,19 @@
+{
+    "ImageName": "MAX_0101.JPG",
+    "tiff:Make": "Autel Robotics",
+    "tiff:Model": "XL715",
+    "ImageWidth": "8000",
+    "ImageHeight": "6000",
+    "GPS Latitude": "29.20304959997222",
+    "GPS Longitude": "-80.99696159997222",
+    "GPS Altitude": "1.465",
+    "Digital Zoom Ratio": "1.0",
+    "Camera:Roll": "0.0",
+    "xprop": "0.50",
+    "yprop": "0.50",    
+    "drone:GimbalPitchDegree": "2.25",
+    "drone:GimbalYawDegree": "45.199999",
+    "Focal Length": "4.489999994635582",
+    "Focal Length 35": "24.0",
+    "Date/TimeDate Original": "2025:06:01 18:34:39"
+}
