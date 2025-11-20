@@ -62,13 +62,15 @@ def processMessage(sock):
         data = data.rstrip('\n')
         print("UDP Multicast processMessage: received from ",fromAddress);
         print("UDP Multicast processMessage: received: '",data);
-        reply = data+"\n\n"
-        reply = reply.encode()
-        sock.sendto(reply,fromAddress)
+
+        #reply = data+"\n\n"
+        #reply = reply.encode()
+        #sock.sendto(reply,fromAddress)
+        
         return 1
     
-    except:
-        print("processMessage: some sort of error")
+    except OSError as e:
+        print(f"processMessage: some sort of error {e}")
         return -1
         
 # ----------------------------------------------------
@@ -83,8 +85,8 @@ print("Port is "+sys.argv[2])
 
 serverSock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
 serverSock.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
-serverSock.setsockopt(socket.IPPROTO_IP,socket.IP_MULTICAST_TTL,4)
-serverSock.setsockopt(socket.IPPROTO_IP,socket.IP_MULTICAST_LOOP,1)
+serverSock.setsockopt(socket.IPPROTO_IP,socket.IP_MULTICAST_TTL,64)
+serverSock.setsockopt(socket.IPPROTO_IP,socket.IP_MULTICAST_LOOP,0)
 serverAddress = ('239.2.3.1',int(sys.argv[2]))
 serverSock.bind(serverAddress)
 
