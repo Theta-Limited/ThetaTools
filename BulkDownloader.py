@@ -35,6 +35,7 @@ from urllib.parse import urlparse
 from urllib.request import urlopen
 from urllib.error import URLError, HTTPError
 import sys
+from typing import Callable
 
 EARTH_RADIUS_KM = 6371.0
 # Approximate length of 1 degree of latitude in km
@@ -334,7 +335,144 @@ def make_tiles_without_spillover(
     return tiles, (lat_min, lon_min, lat_max, lon_max)
 
 # ------------------------------------------------------------------------
-# helper functions
+# ------------------------------------------------------------------------
+# region checkers that matches com.openathena.core.GeoRegionChecker.java class
+
+USA_BOUNDING_BOXES = [
+    # West Coast (CA, OR, WA)
+    (32.0, -125.0, 49.0, -114.0),
+
+    # Southwest (AZ, NM, TX, OK, AR)
+    (25.0, -115.0, 37.0, -93.0),
+
+    # Intermountain West (UT, NV, ID, WY, MT)
+    (37.0, -115.0, 49.0, -109.0),
+
+    # Southwest (Texas, New Mexico, Arizona) – duplicate of above in your Java,
+    # included here for fidelity; harmless but slightly redundant.
+    (25.0, -115.0, 37.0, -93.0),
+
+    # Midwest
+    (36.0, -102.0, 49.0, -89.0),
+
+    # Great Plains / corrected Midwest including Colorado
+    (36.0, -109.0, 49.0, -89.0),
+
+    # Southeast (FL, GA, AL, MS, LA, eastern TX panhandle)
+    (24.396308, -89.0, 36.5, -75.0),
+
+    # Northeast
+    (36.5, -89.0, 49.0, -66.93457),
+
+    # Alaska (including the Aleutian Islands)
+    (51.2, -179.148909, 71.538800, -129.974167),
+
+    # Hawaii
+    (18.7763, -178.334698, 28.402123, -154.806773),
+
+    # Puerto Rico
+    (17.5, -67.5, 18.5, -65.0),
+
+    # Updated Pacific Northwest bounding box to include all of Washington State
+    # and coastal islands
+    (45.5, -125.0, 49.5, -116.5),
+]
+
+# Western Europe + related regions
+EUROPE_BOUNDING_BOXES = [
+    # Western Europe (France, Benelux, Germany)
+    (41.0, -5.0, 51.5, 10.5),
+
+    # Southern Europe (Spain, Portugal, Italy, Greece)
+    (35.0, -10.0, 45.0, 20.0),
+
+    # Northern Europe (Scandinavia)
+    (55.0, 5.0, 71.0, 30.0),
+
+    # Eastern Europe (Poland, Czechia, Hungary, Romania)
+    (45.0, 10.5, 56.0, 30.0),
+
+    # Southeast Europe (Balkans)
+    (39.0, 13.0, 48.0, 30.0),
+
+    # Iceland
+    (63.0, -25.0, 67.0, -13.0),
+
+    # British Isles (United Kingdom, Ireland, and surrounding islands)
+    (49.9, -14.0, 61.0, 2.0),
+
+    # Greece including all major islands
+    (34.0, 19.0, 42.0, 30.0),
+
+    # Cyprus
+    (34.5, 32.0, 35.7, 34.0),
+
+    # Low Countries (Netherlands, Belgium, Luxembourg)
+    (49.4, 2.5, 53.7, 7.3),
+
+    # Baltic States (Estonia, Latvia, Lithuania)
+    (54.0, 20.0, 59.7, 28.2),
+]
+
+
+def is_in_usa(latitude: float, longitude: float) -> bool:
+    """
+    Return True if (latitude, longitude) lies inside any of the USA bounding boxes
+    (continental US, Alaska, Hawaii, Puerto Rico, etc.).
+    """
+    for lat_min, lon_min, lat_max, lon_max in USA_BOUNDING_BOXES:
+        if (lat_min <= latitude <= lat_max and
+                lon_min <= longitude <= lon_max):
+            return True
+    return False
+
+
+def is_in_europe(latitude: float, longitude: float) -> bool:
+    """
+    Return True if (latitude, longitude) lies inside any of the European
+    bounding boxes (Western Europe, Iceland, British Isles, Cyprus, Baltics, etc.).
+    """
+    for lat_min, lon_min, lat_max, lon_max in EUROPE_BOUNDING_BOXES:
+        if (lat_min <= latitude <= lat_max and
+                lon_min <= longitude <= lon_max):
+            return True
+    return False
+
+def bbox_all_in_usa(lat_min: float, lon_min: float,
+                    lat_max: float, lon_max: float) -> bool:
+    return bbox_all_corners_in_region(
+        lat_min, lon_min, lat_max, lon_max, is_in_usa
+    )
+
+def bbox_all_in_europe(lat_min: float, lon_min: float,
+                       lat_max: float, lon_max: float) -> bool:
+    return bbox_all_corners_in_region(
+        lat_min, lon_min, lat_max, lon_max, is_in_europe
+    )
+
+def bbox_all_corners_in_region(
+    lat_min: float,
+    lon_min: float,
+    lat_max: float,
+    lon_max: float,
+    region_check: Callable[[float, float], bool],
+) -> bool:
+    """
+    Return True if *all four corners* of the bounding box are inside
+    the given region_check(latitude, longitude) function.
+    """
+    corners = [
+        (lat_min, lon_min),  # SW
+        (lat_min, lon_max),  # SE
+        (lat_max, lon_min),  # NW
+        (lat_max, lon_max),  # NE
+    ]
+    return all(region_check(lat, lon) for lat, lon in corners)
+
+
+# ------------------------------------------------------------------------
+# ------------------------------------------------------------------------
+# helper functions 
 
 def km_per_deg_lon_at_lat(lat_deg: float) -> float:
     """
@@ -471,7 +609,8 @@ def print_summary(tiles, bbox, tile_size_m: float,
                   dry_run: bool,
                   center_lat: float,
                   center_lon: float,
-                  server_url: str | None):
+                  server_url: str | None,
+                  dataset: str):
 
     global verbose
 
@@ -499,6 +638,7 @@ def print_summary(tiles, bbox, tile_size_m: float,
 
     print(f"Requested tile size: {tile_size_m:,.1f} m")
     print(f"Requested overlap:   {overlap_m:,.1f} m")
+    print(f"Dataset:             {dataset}")
     print(
         f"Tiles (rows x cols): {num_rows:,} x {num_cols:,} "
         f"(total {num_tiles:,})"
@@ -534,6 +674,7 @@ def write_json(tiles, bbox,
                overlap_m: float,
                server_url: str | None,
                uniform: bool,
+               dataset: str,
                filename: str = "bulkdownload.json"):
     lat_min, lon_min, lat_max, lon_max = bbox
 
@@ -546,6 +687,7 @@ def write_json(tiles, bbox,
         "overlap_m": overlap_m,
         "server_url": server_url,
         "uniform": uniform,
+        "dataset": dataset,
         "bbox": {
             "lat_min": lat_min,
             "lon_min": lon_min,
@@ -667,9 +809,10 @@ def main():
         description="Generate a grid of tiles over a square bounding box "
                     "around a center latitude/longitude."
     )
-    parser.add_argument("-v", "--verbose",action="store_true",
-                        help="Enable verbose output.")
-
+    parser.add_argument(
+        "-v", "--verbose",action="store_true",
+        help="Enable verbose output."
+    )
     parser.add_argument(
         "--bounds",
         type=float,
@@ -683,7 +826,6 @@ def main():
             "BOTTOM = south-most lat, TOP = north-most lat."
         ),
     )
-    
     parser.add_argument(
         "--tile-size-m",
         type=float,
@@ -718,6 +860,14 @@ def main():
         default=True,  
         help="Whether to use uniform-size tiles that spill past the bounding box "
         "(true) or clipped tiles (false).",
+    )
+    parser.add_argument(
+        "--dataset",
+        type=str.upper,
+        choices=["SRTM","3DEP","COP30","EUDTM", "AUTO"],
+        required=True,
+        help="Elevation dataset to download: SRTM, 3DEP, COP30, EUDTM, or automatic. "
+        "Choose auto to let this script determine best dataset.",
     )
     
     args = parser.parse_args()
@@ -761,6 +911,7 @@ def main():
         center_lat=center_lat,
         center_lon=center_lon,
         server_url=args.server_url,
+        dataset=args.dataset,
     )
 
     # JSON output if requested
@@ -774,6 +925,7 @@ def main():
             overlap_m=args.overlap_m,
             server_url=args.server_url,
             uniform=args.uniform,
+            dataset=args.dataset,
             filename="bulkdownload.json",
         )
 
@@ -786,11 +938,27 @@ def main():
     
     args.server_url = validate_server_url_or_exit(args.server_url)
 
+    # determine dataset; if automatic, check if region is in USA or Europe
+    # and set to 3dep or eudtm otherwise use cop30
+    # if user specifically set one, try that w/o checking
+
+    all_usa = bbox_all_in_usa(lat_min, lon_min, lat_max, lon_max)
+    all_eu = bbox_all_in_europe(lat_min, lon_min, lat_max, lon_max)
+    
+    if args.dataset == "AUTO":
+        args.dataset="cop30"
+        if all_usa:
+            args.dataset="3dep"
+        if all_eu:
+            args.dataset="eudtm"
+
     # now, loop through the tiles and print out (if verbose)
     # tile info; if dry-run, show what we would post
     # if not dry-run, do the actual post
 
     for tile in tiles:
+        urlstr = f"{args.server_url}" + f"/api/v1/openathena/dem?lat={tile.center_lat:.6f}&lon={tile.center_lon:.6f}&len={tile.width_m:.0f}&dataset={args.dataset}&apikey=" + OPENATHENA_API_KEY
+
         if verbose:
             print(
                 f"Tile: r{tile.row} c{tile.col}: "
@@ -799,7 +967,8 @@ def main():
                 f"center: ({tile.center_lat:.6f},{tile.center_lon:.6f}), "
                 f"size: ≈ {tile.width_m:.1f} m x {tile.height_m:.1f} m"
             )
-        urlstr = f"{args.server_url}" + f"/api/v1/openathena/dem?lat={tile.center_lat:.6f}&lon={tile.center_lon:.6f}&len={tile.width_m:.0f}&apikey=" + OPENATHENA_API_KEY
+            print(f"url: {urlstr}")
+            
         if args.dry_run == False:
             if verbose:
                 print(f"     Going to invoke API to download tile {tile.row}x{tile.col}")
