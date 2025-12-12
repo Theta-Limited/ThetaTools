@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 # BulkDownloader.py
-# Copyright 2024 Theta Informatics LLC
+# Copyright 2025 Theta Informatics LLC
 # Apache 2.0 license
 #
 # Given a lat,lon coordinates that make a large bounding
@@ -22,9 +22,15 @@
 # testing
 # ft sill bounding box is: -98.756447 34.632163 -98.270302 34.72838
 # HI island including some water: -158.293488 21.244838 -157.618927 21.705921
+# Scotland -3.857574337162078 56.46782643095685 -2.645416022278369 56.97819241162202
+# Poland 16.892578080296516 52.3296326113996 17.680114544928074 52.77053622518159
+# Philmont -105.364563 	36.244698 -104.689819  36.664288
+# Taiwan 119.841064  21.805578 122.338623 25.443771
+# S Taiwain 120.113159 21.901514 121.660034 23.897808
+# N Italy 9.137694954872131 44.119141749106944 12.408691763877867 45.00313340559234
 
-# still need to add support for specifying dataset type and how to
-# handle fallbacks?
+# right now with Core 0.5.1 no need for pacing or rate limiting as the
+# cache directory indexing is inefficient and extremely slow
 
 import math
 import argparse
