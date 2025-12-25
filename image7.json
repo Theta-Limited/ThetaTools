@@ -1,0 +1,22 @@
+{
+   "ImageName": "penguin-1.jpg",    
+   "drone:GimbalPitchDegree": "44.9",
+   "Comment": "thermal camera, model name overloaded",
+   "GPS Latitude": "-42.936515388888886",
+   "GPS Longitude": "-64.33475836111111",
+   "Focal Length": "13.5",
+   "drone:GimbalYawDegree": "23.5",
+   "Date/Time Original": "2024:11:06 19:40:10",
+   "tiff:Make": "DJI",
+   "GPS Altitude": "58.463",
+   "tiff:Model": "ZH20T",
+   "ImageHeight": "512",
+   "ImageWidth": "640",
+   "Known": "true",
+   "Drone Vertical Datum": "WGS84",
+   "Focal Length 35": "58.0",
+   "Lens": "perspective",
+   "Digital Zoom Ratio": "1.0",
+   "Camera:Roll": "0.0",
+   "Thermal": "true"
+}

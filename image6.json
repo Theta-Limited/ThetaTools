@@ -1,0 +1,22 @@
+{
+   "ImageName": "DJI_20251108121931_0002_W.JPG",    
+   "drone:GimbalPitchDegree": "88.8",
+   "Comment": "Unknown drone make/model",
+   "GPS Latitude": "-42.08536391666667",
+   "GPS Longitude": "-63.86702144444445",
+   "Focal Length": "6.72",
+   "drone:GimbalYawDegree": "162.9",
+   "Date/Time Original": "2025:11:08 12:19:31",
+   "tiff:Make": "DJI",
+   "GPS Altitude": "46.85",
+   "tiff:Model": "H30T",
+   "ImageHeight": "3024",
+   "ImageWidth": "4032",
+   "Known": "false",
+   "Drone Vertical Datum": "WGS84",
+   "Focal Length 35": "24.0",
+   "Lens": "unknown",
+   "Digital Zoom Ratio": "1.0",
+   "Camera:Roll": "0.0",
+   "Thermal": "false"
+}

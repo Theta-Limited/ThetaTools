@@ -1,0 +1,22 @@
+{
+   "ImageName": "skydio-thermal-S1008521.jpg",    
+   "drone:GimbalPitchDegree": "59.679573",
+   "Comment": "X2 Enterprise Color/Thermal Thermal FLIR Boson 320x256 9.1mm",
+   "GPS Latitude": "29.7859339",
+   "GPS Longitude": "-95.6354173",
+   "Focal Length": "9.1",
+   "drone:GimbalYawDegree": "0.10035",
+   "Date/Time Original": "2023:12:16 20:19:45",
+   "tiff:Make": "Skydio",
+   "GPS Altitude": "17.42681550970621",
+   "tiff:Model": "X2 Narrow",
+   "ImageHeight": "512",
+   "ImageWidth": "640",
+   "Known": "true",
+   "Drone Vertical Datum": "ORTHOMETRIC",
+   "Focal Length 35": "Uknown",
+   "Lens": "perspective",
+   "Digital Zoom Ratio": "1.0",
+   "Camera:Roll": "-0.519399",
+   "Thermal": "true"
+}

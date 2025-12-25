@@ -1,4 +1,5 @@
 {
+    "ImageName": "TestImage",    
     "drone:GimbalPitchDegree": "41.40",
     "dataset":"srtm",
     "yprop": "0.25",
@@ -9,7 +10,6 @@
     "Date/Time Original": "2024:06:21 09:15:00",
     "tiff:Make": "DJI",
     "GPS Altitude": "437.920107",
-    "ImageName": "TestImage",
     "tiff:Model": "FC8482",
     "ImageHeight": "3024",
     "xprop": "0.25",

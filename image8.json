@@ -1,0 +1,22 @@
+{
+   "ImageName": "autel-ivyhill-1.jpg",    
+   "drone:GimbalPitchDegree": "89.999996",
+   "Comment": "Autel Evo Lite 640t Enterprise color camera",
+   "GPS Latitude": "33.82688919997223",
+   "GPS Longitude": "-84.52425759997222",
+   "Focal Length": "4.489999994635582",
+   "drone:GimbalYawDegree": "-128.479997",
+   "Date/Time Original": "2025:01:23 03:02:08",
+   "tiff:Make": "Autel Robotics",
+   "GPS Altitude": "381.34799",
+   "tiff:Model": "XL715",
+   "ImageHeight": "6000",
+   "ImageWidth": "8000",
+   "Known": "true",
+   "Drone Vertical Datum": "WGS84",
+   "Focal Length 35": "24.0",
+   "Lens": "perspective",
+   "Digital Zoom Ratio": "1.0",
+   "Camera:Roll": "0.0",
+   "Thermal": "false"
+}

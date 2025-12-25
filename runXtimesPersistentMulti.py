@@ -1,100 +1,237 @@
 #!/usr/bin/env python3
+"""
+runXtimesPersistentMulti.py
+
+Simple multi-client REST load test.
+
+Args:
+  HOST PORT NUM_CLIENTS REQUESTS_PER_CLIENT
+
+Behavior:
+- Spawns NUM_CLIENTS threads (1..16)
+- Each client keeps ONE persistent HTTP connection (requests.Session)
+- Each client sequentially POSTs imageX.json (X = client number, 1-based)
+"""
 
 import os
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass
+from typing import List, Optional
+
 import requests
 import json
 
-# API key from environment (e.g. export API_KEY=... before running)
-API_KEY = os.environ.get("OPENATHENA_API_KEY")
+API_PATH = "/api/v1/openathena/locationsimple"
+STATS_PATH = "/api/v1/openathena/admin/stats"
 
-# REST server URL (same as you used with curl)
-BASE_URL = "http://127.0.0.1:8000"
-PATH = "/api/v1/openathena/locationsimple?apikey=" + API_KEY
-STATSPATH = "/api/v1/openathena/admin/stats?apikey=" + API_KEY
+@dataclass
+class ClientResult:
+    client_id: int
+    sent: int
+    ok: int
+    failed: int
+    total_ms: float
+    latencies_ms: List[float]
+    first_error: Optional[str]
 
-# JSON body file: either from env var JSON_FILE or hardcoded fallback
-IMAGE_FILES = [
-    "image0.json",
-    "image1.json",
-    "image2.json",
-    "image3.json",
-    "image4.json",                
-]
 
-def load_body_from_file(path: str) -> str:
-    with open(path, "r", encoding="utf-8") as f:
+def read_json_bytes(filename: str) -> bytes:
+    with open(filename, "rb") as f:
         return f.read()
 
-def main():
-    if len(sys.argv) != 2:
-        print(f"Usage: {sys.argv[0]} NUM_REQUESTS")
-        sys.exit(1)
 
-    try:
-        num_requests = int(sys.argv[1])
-    except ValueError:
-        print("NUM_REQUESTS must be an integer")
-        sys.exit(1)
+def fetch_stats(session: requests.Session, url: str, api_key: str) -> dict:
+    r = session.get(url,
+                    params={"apikey": api_key},
+                    timeout=30
+    )
+    r.raise_for_status()
+    return r.json()
 
-    BODIES = [load_body_from_file(p) for p in IMAGE_FILES]
-    url = BASE_URL + PATH
-    statsurl = BASE_URL + STATSPATH
 
+def client_worker(
+    client_id: int,
+    post_url: str,
+    api_key: str,
+    requests_per_client: int,
+    json_bytes: bytes,
+) -> ClientResult:
     session = requests.Session()
+    session.headers.update(
+        {
+            "Content-Type": "application/json",
+            "Connection": "keep-alive",
+        }
+    )
 
-    headers = {
-        "Content-Type": "application/json",
-        "Connection": "keep-alive",
-    }
-    if API_KEY:
-        headers["Authorization"] = f"Bearer {API_KEY}"
+    ok = 0
+    failed = 0
+    latencies: List[float] = []
+    first_error: Optional[str] = None
 
-    print(f"Sending {num_requests} POST requests to {url}")
+    # print(f"Client {client_id} starting with {json_bytes}")
 
-    if API_KEY:
-        print("Using API_KEY from environment.")
-    else:
-        print("No API_KEY set in environment (API_KEY).")
+    t0 = time.perf_counter()
+    try:
+        for _ in range(requests_per_client):
+            start = time.perf_counter()
+            try:
+                r = session.post(
+                    post_url,
+                    params={"apikey": api_key},
+                    data=json_bytes,
+                    timeout=30,
+                )
+                if 200 <= r.status_code < 300:
+                    ok += 1
+                else:
+                    failed += 1
+                    if first_error is None:
+                        first_error = f"HTTP {r.status_code}: {r.text[:200]}"
+            except requests.RequestException as e:
+                failed += 1
+                if first_error is None:
+                    first_error = f"{type(e).__name__}: {e}"
+            finally:
+                end = time.perf_counter()
+                latencies.append((end - start) * 1000.0)
+    finally:
+        session.close()
 
-    # make first request and show the output; this warms up the
-    # cache
-    resp = session.get(statsurl, headers=headers)
-    stats = resp.json()
-    start_counter = stats["numRESTPosts"]
-    print("Begining number of posts: ",start_counter)
-    print("Heap: Sz: ",stats["coreHeapSize"]," Max: ",stats["coreHeapMaxSize"]," Free: ",stats["coreHeapFreeMemory"])    
-            
-    total_start = time.perf_counter();
+    total_ms = (time.perf_counter() - t0) * 1000.0
+    return ClientResult(
+        client_id=client_id,
+        sent=requests_per_client,
+        ok=ok,
+        failed=failed,
+        total_ms=total_ms,
+        latencies_ms=latencies,
+        first_error=first_error,
+    )
 
-    for i in range(1, num_requests + 1):
-        body = BODIES[(i-1) % len(BODIES)]
-        try:
-            resp = session.post(url, data=body, headers=headers)
-            # You can comment this out if you don’t want per-request noise
-            # print(f"{i}/{num_requests}: ",resp.json())
-        except requests.exceptions.RequestException as e:
-            print(f"{i}/{num_requests}: request failed: {e}")
-            # Optional: try to recreate the session once if the connection died
-            session.close()
-            session = requests.Session()
 
-    total_end = time.perf_counter();
+def percentile(sorted_vals: List[float], p: float) -> float:
+    if not sorted_vals:
+        return 0.0
+    k = (len(sorted_vals) - 1) * (p / 100.0)
+    f = int(k)
+    c = min(f + 1, len(sorted_vals) - 1)
+    if f == c:
+        return sorted_vals[f]
+    return sorted_vals[f] * (c - k) + sorted_vals[c] * (k - f)
 
-    resp = session.get(statsurl, headers=headers)
-    stats = resp.json()
-    end_counter = stats["numRESTPosts"]    
-    print("Ending number of posts: ",stats["numRESTPosts"])
-    print("Delta posts is ",end_counter-start_counter)
-    print("Heap: Sz: ",stats["coreHeapSize"]," Max: ",stats["coreHeapMaxSize"]," Free: ",stats["coreHeapFreeMemory"])
-    
-    session.close()
 
-    total_duration_ms = (total_end - total_start) * 1000.0
-    avg_ms = total_duration_ms / num_requests if num_requests > 0 else 0.0
-    print(f"\nTotal time: {total_duration_ms:.2f} ms for {num_requests} requests")
-    print(f"Average per request: {avg_ms:.2f} ms")
+def main() -> int:
+    if len(sys.argv) != 5:
+        print(f"Usage: {sys.argv[0]} HOST PORT NUM_CLIENTS REQUESTS_PER_CLIENT")
+        return 2
+
+    host = sys.argv[1]
+    try:
+        port = int(sys.argv[2])
+        num_clients = int(sys.argv[3])
+        requests_per_client = int(sys.argv[4])
+    except ValueError:
+        print("PORT, NUM_CLIENTS, and REQUESTS_PER_CLIENT must be integers")
+        return 2
+
+    if not (1 <= num_clients <= 16):
+        print("NUM_CLIENTS must be between 1 and 16")
+        return 2
+    if requests_per_client < 1:
+        print("REQUESTS_PER_CLIENT must be >= 1")
+        return 2
+
+    api_key = os.environ.get("OPENATHENA_API_KEY")
+    if not api_key:
+        print("ERROR: OPENATHENA_API_KEY is not set")
+        return 2
+
+    base_url = f"http://{host}:{port}"
+    post_url = base_url + API_PATH
+    stats_url = base_url + STATS_PATH
+
+    # Load JSON bodies
+    json_blobs = {}
+    for cid in range(1, num_clients + 1):
+        json_blobs[cid] = read_json_bytes(f"image{cid}.json")
+
+    print(f"Target: {post_url}")
+    print(f"Clients: {num_clients}")
+    print(f"Requests per client: {requests_per_client}")
+    print(f"Total requests: {num_clients * requests_per_client}")
+
+    # Stats before
+    try:
+        with requests.Session() as s:
+            before = fetch_stats(s, stats_url, api_key)
+            print("\n=== Server stats (before) ===")
+            print("numRESTPosts:", before.get("numRESTPosts"))
+    except Exception as e:
+        print(f"WARNING: could not fetch stats before run: {e}")
+
+    start_wall = time.perf_counter()
+
+    results: List[ClientResult] = []
+    with ThreadPoolExecutor(max_workers=num_clients) as ex:
+        futures = [
+            ex.submit(
+                client_worker,
+                cid,
+                post_url,
+                api_key,
+                requests_per_client,
+                json_blobs[cid],
+            )
+            for cid in range(1, num_clients + 1)
+        ]
+        for f in as_completed(futures):
+            results.append(f.result())
+
+    wall_ms = (time.perf_counter() - start_wall) * 1000.0
+    results.sort(key=lambda r: r.client_id)
+
+    all_latencies = sorted(ms for r in results for ms in r.latencies_ms)
+    total_ok = sum(r.ok for r in results)
+    total_failed = sum(r.failed for r in results)
+
+    print("\n=== Per-client ===")
+    for r in results:
+        avg = sum(r.latencies_ms) / len(r.latencies_ms)
+        print(
+            f"client {r.client_id:2d}: ok={r.ok:4d} failed={r.failed:4d} "
+            f"total={r.total_ms:8.2f} ms avg={avg:7.2f} ms"
+        )
+
+    rps = total_ok / (wall_ms / 1000.0)
+
+    print("\n=== Overall ===")
+    print(f"Wall time: {wall_ms:.2f} ms")
+    print(f"OK: {total_ok}  Failed: {total_failed}")
+    print(f"Throughput: {rps:.2f} req/s")
+    print(
+        f"Latency ms: avg={sum(all_latencies)/len(all_latencies):.2f} "
+        f"p50={percentile(all_latencies,50):.2f} "
+        f"p90={percentile(all_latencies,90):.2f} "
+        f"p99={percentile(all_latencies,99):.2f}"
+    )
+
+    # Stats after
+    try:
+        with requests.Session() as s:
+            after = fetch_stats(s, stats_url, api_key)
+            print("\n=== Server stats (after) ===")
+            print("numRESTPosts:", after.get("numRESTPosts"))
+            print("peakActiveThreadCount:", after.get("serverPeakActiveThreadCount"))            
+            # print(json.dumps(after, indent=1, sort_keys=True))
+            # print(after)
+    except Exception as e:
+        print(f"WARNING: could not fetch stats after run: {e}")
+
+    return 0 if total_failed == 0 else 1
+
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

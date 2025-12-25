@@ -1,0 +1,22 @@
+{
+   "ImageName": "skydio2-8.jpg",    
+   "drone:GimbalPitchDegree": "39.878972",
+   "Comment": "Skydio 2 and 2+ Sony IMX577 1/2.3\u201d 12.3MP CMOS",
+   "GPS Latitude": "33.8266639",
+   "GPS Longitude": "-84.5242417",
+   "Focal Length": "3.7",
+   "drone:GimbalYawDegree": "237.576042",
+   "Date/Time Original": "2024:01:26 20:15:19",
+   "tiff:Make": "Skydio",
+   "GPS Altitude": "417.46335660371585",
+   "tiff:Model": "2",
+   "ImageHeight": "3040",
+   "ImageWidth": "4056",
+   "Known": "true",
+   "Drone Vertical Datum": "ORTHOMETRIC",
+   "Focal Length 35": "21.0",
+   "Lens": "perspective",
+   "Digital Zoom Ratio": "1.0",
+   "Camera:Roll": "-0.605649",
+   "Thermal": "false"
+}

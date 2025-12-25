@@ -1,0 +1,22 @@
+{
+   "ImageName": "DJI_20240919142827_0007_V.JPG",    
+   "drone:GimbalPitchDegree": "44.9",
+   "Comment": "DJI Mavic 3 Enterprise Main Hasselblad Camera",
+   "GPS Latitude": "41.321301000000005",
+   "GPS Longitude": "-96.36456249999999",
+   "Focal Length": "12.29",
+   "drone:GimbalYawDegree": "-1.9",
+   "Date/Time Original": "2024:09:19 14:28:27",
+   "tiff:Make": "DJI",
+   "GPS Altitude": "352.45",
+   "tiff:Model": "M3E",
+   "ImageHeight": "3956",
+   "ImageWidth": "5280",
+   "Known": "true",
+   "Drone Vertical Datum": "WGS84",
+   "Focal Length 35": "24.0",
+   "Lens": "perspective",
+   "Digital Zoom Ratio": "1.0",
+   "Camera:Roll": "0.0",
+   "Thermal": "false"
+}

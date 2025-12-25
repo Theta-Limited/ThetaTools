@@ -1,0 +1,22 @@
+{
+   "ImageName": "autel-xl709-MAX_0042.JPG",    
+   "drone:GimbalPitchDegree": "24.700000000000003",
+   "Comment": "Autel EVO II v3 640T color camera",
+   "GPS Latitude": "33.835736540333336",
+   "GPS Longitude": "-84.53262561725",
+   "Focal Length": "6.669999994337559",
+   "drone:GimbalYawDegree": "-119.63",
+   "Date/Time Original": "2024:02:02 17:22:02",
+   "tiff:Make": "Autel Robotics",
+   "GPS Altitude": "252.61795",
+   "tiff:Model": "XL709",
+   "ImageHeight": "3072",
+   "ImageWidth": "4096",
+   "Known": "true",
+   "Drone Vertical Datum": "WGS84",
+   "Focal Length 35": "23.0",
+   "Lens": "perspective",
+   "Digital Zoom Ratio": "1.0",
+   "Camera:Roll": "0.0",
+   "Thermal": "false"
+}

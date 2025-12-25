@@ -1,0 +1,22 @@
+{
+   "ImageName": "anafi-ivyhill-2.jpg",    
+   "drone:GimbalPitchDegree": "47.548512",
+   "Comment": "Sony IMX230 CMOS sensor",
+   "GPS Latitude": "33.826847434083334",
+   "GPS Longitude": "-84.52485445975",
+   "Focal Length": "4.0",
+   "drone:GimbalYawDegree": "82.254082",
+   "Date/Time Original": "2025:03:04 14:28:39",
+   "tiff:Make": "Parrot",
+   "GPS Altitude": "384.36252278649056",
+   "tiff:Model": "Anafi",
+   "ImageHeight": "3456",
+   "ImageWidth": "4608",
+   "Known": "true",
+   "Drone Vertical Datum": "ORTHOMETRIC",
+   "Focal Length 35": "23.0",
+   "Lens": "perspective",
+   "Digital Zoom Ratio": "1.1597222222222223",
+   "Camera:Roll": "0.165687",
+   "Thermal": "false"
+}

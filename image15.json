@@ -1,0 +1,22 @@
+{
+   "ImageName": "mini4pro-westminter-11.jpg",    
+   "drone:GimbalPitchDegree": "26.4",
+   "Comment": "DJI Mini 4 Pro",
+   "GPS Latitude": "33.84278061111112",
+   "GPS Longitude": "-84.43497961111112",
+   "Focal Length": "6.72",
+   "drone:GimbalYawDegree": "22.9",
+   "Date/Time Original": "2024:01:28 14:23:58",
+   "tiff:Make": "DJI",
+   "GPS Altitude": "350.303",
+   "tiff:Model": "FC8482",
+   "ImageHeight": "3024",
+   "ImageWidth": "4032",
+   "Known": "true",
+   "Drone Vertical Datum": "WGS84",
+   "Focal Length 35": "24.0",
+   "Lens": "perspective",
+   "Digital Zoom Ratio": "1.0",
+   "Camera:Roll": "0.0",
+   "Thermal": "false"
+}
