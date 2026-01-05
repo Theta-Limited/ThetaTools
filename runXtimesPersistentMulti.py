@@ -19,20 +19,25 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from typing import List, Optional
+from datetime import datetime
 
 import requests
 import json
 
+RESET_STATS_PATH = "/api/v1/openathena/admin/stats/reset"
 API_PATH = "/api/v1/openathena/locationsimple"
 STATS_PATH = "/api/v1/openathena/admin/stats"
 
 @dataclass
 class ClientResult:
     client_id: int
+    start_time_iso: str
+    end_time_iso: str
     sent: int
     ok: int
     failed: int
     total_ms: float
+    wall_clock_ms: float
     latencies_ms: List[float]
     first_error: Optional[str]
 
@@ -42,6 +47,14 @@ def read_json_bytes(filename: str) -> bytes:
         return f.read()
 
 
+def reset_stats(session: requests.Session, url: str, api_key: str) -> dict:
+    r = session.post(url,
+                    params={"apikey": api_key},
+                    timeout=30
+    )
+    r.raise_for_status()
+    return r.json()
+    
 def fetch_stats(session: requests.Session, url: str, api_key: str) -> dict:
     r = session.get(url,
                     params={"apikey": api_key},
@@ -72,6 +85,9 @@ def client_worker(
     first_error: Optional[str] = None
 
     # print(f"Client {client_id} starting with {json_bytes}")
+    print(f"Client {client_id} starting")
+
+    client_start_dt = datetime.now().astimezone()
 
     t0 = time.perf_counter()
     try:
@@ -85,6 +101,7 @@ def client_worker(
                     timeout=30,
                 )
                 if 200 <= r.status_code < 300:
+                    # print(f"Client {client_id} got OK response")
                     ok += 1
                 else:
                     failed += 1
@@ -100,9 +117,15 @@ def client_worker(
     finally:
         session.close()
 
+    client_end_dt = datetime.now().astimezone()
     total_ms = (time.perf_counter() - t0) * 1000.0
+    wall_clock_ms = (client_end_dt - client_start_dt).total_seconds() * 1000
+    
     return ClientResult(
         client_id=client_id,
+        start_time_iso=client_start_dt.isoformat(timespec="seconds"),
+        end_time_iso=client_end_dt.isoformat(timespec="seconds"),
+        wall_clock_ms=wall_clock_ms,
         sent=requests_per_client,
         ok=ok,
         failed=failed,
@@ -152,6 +175,7 @@ def main() -> int:
     base_url = f"http://{host}:{port}"
     post_url = base_url + API_PATH
     stats_url = base_url + STATS_PATH
+    reset_url = base_url + RESET_STATS_PATH
 
     # Load JSON bodies
     json_blobs = {}
@@ -166,6 +190,7 @@ def main() -> int:
     # Stats before
     try:
         with requests.Session() as s:
+            reset_stats(s,reset_url, api_key)
             before = fetch_stats(s, stats_url, api_key)
             print("\n=== Server stats (before) ===")
             print("numRESTPosts:", before.get("numRESTPosts"))
@@ -190,7 +215,7 @@ def main() -> int:
         for f in as_completed(futures):
             results.append(f.result())
 
-    wall_ms = (time.perf_counter() - start_wall) * 1000.0
+    wall_ms = round( (time.perf_counter() - start_wall) * 1000.0, 2)
     results.sort(key=lambda r: r.client_id)
 
     all_latencies = sorted(ms for r in results for ms in r.latencies_ms)
@@ -202,7 +227,8 @@ def main() -> int:
         avg = sum(r.latencies_ms) / len(r.latencies_ms)
         print(
             f"client {r.client_id:2d}: ok={r.ok:4d} failed={r.failed:4d} "
-            f"total={r.total_ms:8.2f} ms avg={avg:7.2f} ms"
+            f"total={r.total_ms:8.2f} ms avg={avg:7.2f} ms "
+            f"duration={r.wall_clock_ms:.2f} ms "
         )
 
     rps = total_ok / (wall_ms / 1000.0)
@@ -224,7 +250,10 @@ def main() -> int:
             after = fetch_stats(s, stats_url, api_key)
             print("\n=== Server stats (after) ===")
             print("numRESTPosts:", after.get("numRESTPosts"))
-            print("peakActiveThreadCount:", after.get("serverPeakActiveThreadCount"))            
+            print("peakActiveThreadCount:", after.get("serverPeakActiveThreadCount"))
+            print("numDemDownloads:", after.get("numDemDownloads"))
+            print("numCotSends:", after.get("numCotSends"))
+            print("cotManagerPeakQueueDepth:",after.get("cotManagerPeakQueueDepth"))
             # print(json.dumps(after, indent=1, sort_keys=True))
             # print(after)
     except Exception as e:

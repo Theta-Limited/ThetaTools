@@ -152,6 +152,8 @@ def do_one_request(
         latency_ms = (time.perf_counter() - start) * 1000.0
         ok = 200 <= resp.status_code < 300
 
+        print(f"client {client_id} response {resp.text}")
+
         if not ok:
             return False, latency_ms, f"HTTP {resp.status_code}: {resp.text[:200]}"
 
@@ -312,7 +314,10 @@ def main() -> int:
                   " peakActiveThreadCount:",after.get("peakActiveThreadCount"),
                   " numDemDownloads:", after.get("numDemDownloads"),
                   " numDemDownloadErrors:", after.get("numDemDownloadErrors"),
-                  "downloadQPeakActive: ", after.get("downloadQPeakActive"))
+                  " downloadQPeakActive: ", after.get("downloadQPeakActive"),
+                  " minDownloadTimeSecs: ", after.get("minDownloadTimeSecs"),
+                  " maxDownloadTimeSecs: ", after.get("maxDownloadTimeSecs")
+                  )
     except Exception as e:
         print(f"WARNING: could not fetch stats after run: {e}")
 

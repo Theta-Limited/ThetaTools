@@ -9,6 +9,7 @@
     "GPS Altitude":  "334.449",
     "Digital Zoom Ratio": "1.0",
     "Camera:Roll": "0.0",
+    "dataset": "3dep",
     "xprop": "0.50",
     "yprop": "0.50",    
     "drone:GimbalPitchDegree": "88.829998",
