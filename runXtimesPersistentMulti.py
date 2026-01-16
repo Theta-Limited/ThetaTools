@@ -98,16 +98,18 @@ def client_worker(
                     post_url,
                     params={"apikey": api_key},
                     data=json_bytes,
-                    timeout=30,
+                    timeout=35,
                 )
                 if 200 <= r.status_code < 300:
                     # print(f"Client {client_id} got OK response")
                     ok += 1
                 else:
                     failed += 1
+                    print(f"Client {client_id} got fail {r.status_code} {r.text[:200]}")
                     if first_error is None:
                         first_error = f"HTTP {r.status_code}: {r.text[:200]}"
             except requests.RequestException as e:
+                print(f"Client {client_id} got exception {e}")
                 failed += 1
                 if first_error is None:
                     first_error = f"{type(e).__name__}: {e}"
