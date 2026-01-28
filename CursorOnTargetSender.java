@@ -81,7 +81,8 @@ public class CursorOnTargetSender {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                String uidString = "thetalimited-" + getDeviceHostnameHash().substring(0,8) + "-" + Long.toString(eventuid);
+				// UID may start with 'OpenAthenaCore' or 'OpenAthenaDesktop' depending on the version used
+                String uidString = "OpenAthena-Yankee42" + "-" + Long.toString(eventuid);
 //                String xmlString = buildCoT(uidString, imageISO, nowAsISO, fiveMinutesFromNowISO, Double.toString(lat), Double.toString(lon), ce, Double.toString(Math.round(hae)), le);
                 String xmlString = buildCoT(uidString, imageISO, nowAsISO, fiveMinutesFromNowISO, Double.toString(lat), Double.toString(lon), ce, Double.toString(hae), le);
 //                String dumxml = "<event uid=\"41414141\" type=\"a-u-G\" how=\"h-c\" start=\"2023-01-24T22:16:53Z\" time=\"2023-01-24T22:16:53Z\" stale=\"2023-01-25T22:06:53Z\"><point le=\"0\" ce=\"0\" hae=\"0\" lon=\"0\" lat=\"0\"/></event>";
