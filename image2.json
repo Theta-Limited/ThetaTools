@@ -7,13 +7,12 @@
 "ImageWidth" :	"4032",
 "ImageHeight" :	"3024",
 "Camera:Roll" :	"0.0",
-"Digital Zoom Ratio" : "1.0",
 "GPS Altitude" : "437.920107",
-"drone:GimbalPitchDegree" : "41.40",
-"drone:GimbalYawDegree" : "156.30",
-"tiff:Make" : "DJI",
-"tiff:Model" : "FC8482",
-"Date/Time Original" : "2024:06:21 09:15:00",
+"GimbalPitchDegree" : "41.40",
+"GimbalYawDegree" : "156.30",
+"Camera Make" : "DJI",
+"Camera Model" : "FC8482",
+"timestamp_8601" : "2026-01-25T21:28:43.456Z",
 "xprop" : "0.25",
 "yprop" : "0.25"
 }

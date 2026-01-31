@@ -1,4 +1,5 @@
 {
+   "ImageName": "test-image.json",
    "drone:GimbalPitchDegree": "58.19441",
    "Comment": "Teal2: Hadron 640R EO sensor",
    "GPS Latitude": "40.710335",
@@ -15,7 +16,6 @@
    "Known": "true",
    "Focal Length 35": "26.45284459717449",
    "Lens": "perspective",
-   "Digital Zoom Ratio": "1.0",
    "Camera:Roll": "-1.027896",
    "Thermal": "false"
 }

@@ -91,7 +91,7 @@ def client_worker(
 
     t0 = time.perf_counter()
     try:
-        for _ in range(requests_per_client):
+        for iter in range(requests_per_client):
             start = time.perf_counter()
             try:
                 r = session.post(
@@ -105,7 +105,7 @@ def client_worker(
                     ok += 1
                 else:
                     failed += 1
-                    print(f"Client {client_id} got fail {r.status_code} {r.text[:200]}")
+                    print(f"Client {client_id} request {iter} got fail {r.status_code} {r.text[:200]}")
                     if first_error is None:
                         first_error = f"HTTP {r.status_code}: {r.text[:200]}"
             except requests.RequestException as e:
