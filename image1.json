@@ -16,5 +16,6 @@
     "Focal Length 35": "24.0",
     "Camera:Roll": "0.0",
     "cottype": "a-n-G",
-    "cotuid": "geolocate.sh-image1.json-127.0.0.1-8000"
+    "cotuid": "geolocate.sh-image1.json-127.0.0.1-8000",
+    "request_uid": "12345678"
 }

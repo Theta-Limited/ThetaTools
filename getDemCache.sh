@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# get OACore RESTful API stats
+# get OACore DME cache
 # get args
 
 if [[ $# -ne 2 ]]; then
@@ -16,15 +16,10 @@ PORT=$2
 
 API_KEY=$OPENATHENA_API_KEY
 
-URL="http://$HOST:$PORT/api/v1/openathena/admin/stats?apikey=$API_KEY"
+URL="http://$HOST:$PORT/api/v1/openathena/dem?apikey=$API_KEY"
 
 CURL_CMD="curl -s $URL"
 
 # echo "Command is: $CURL_CMD"
-
 output=$(eval $CURL_CMD)
-
 echo "$output" | jq 'to_entries | sort_by(.key) | from_entries'
-
-# total=$(jq -r '.numRESTPosts' <<< "$output" )
-echo "Total posts is $total"

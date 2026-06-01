@@ -34,4 +34,3 @@ echo $output
 echo
 
 exit $exitcode
-
