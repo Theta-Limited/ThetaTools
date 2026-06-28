@@ -1,7 +1,7 @@
 {
    "drone:GimbalPitchDegree": 23.3,
    "Comment": 3.14159,
-   "GPS Latitude": abcde,
+   "GPS Latitude": "34.0",
    "GPS Longitude": "23.360063361111113",
    "Focal Length": "10.26",
    "drone:GimbalYawDegree": "101.3",
@@ -20,6 +20,6 @@
    "Camera:Roll": "0.0",
     "Thermal": "false",
     "gtype": "eudtm",
-    "xprop": 0.50,
-    "yprop": 0.50
+    "xprop": 3.50,
+    "yprop": 4.50
 }
